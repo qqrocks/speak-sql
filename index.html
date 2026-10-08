@@ -6,7 +6,7 @@
 <title>Speak SQL — Real-Life Lessons</title>
 <style>
   /* Design: mockup 02 (2026-10-08) — warm paper, ink, orange accent, hard-shadow donate */
-  :root{--ink:#1c1917;--paper:#f6f3ec;--card:#fff;--line:#e7e0d2;--accent:#ea580c;--accent-ink:#9a3412;--accent-soft:#fff7ed;--muted:#78716c;--green:#16a34a}
+  :root{--ink:#1c1917;--paper:#f6f3ec;--card:#fff;--line:#e7e0d2;--accent:#ea580c;--accent-strong:#c2410c;--accent-ink:#9a3412;--accent-soft:#fff7ed;--accent-pale:#ffcfad;--accent-border:#fed7aa;--syntax-kw:#f472b6;--syntax-fn:#2563eb;--syntax-str:#16a34a;--muted:#78716c;--green:#16a34a}
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink)}
   header{background:transparent;color:var(--ink);padding:22px 28px 6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:1280px;margin:0 auto}
@@ -19,7 +19,7 @@
   main{display:grid;grid-template-columns:290px 1fr 300px;gap:18px;min-height:calc(100vh - 80px);max-width:1360px;margin:0 auto;padding:14px 28px 40px}
   .railcard{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:18px;box-shadow:0 12px 32px rgba(28,25,23,.06)}
   .wordcard{background:var(--ink);color:#fff;border-radius:22px;padding:20px;margin-bottom:18px;box-shadow:0 12px 32px rgba(28,25,23,.18)}
-  .wordcard .kicker{color:#fdba74;font-size:11px;font-weight:900;letter-spacing:.08em;margin:0 0 6px}
+  .wordcard .kicker{color:var(--accent-pale);font-size:11px;font-weight:900;letter-spacing:.08em;margin:0 0 6px}
   .wordcard .word{font-size:30px;font-weight:900;letter-spacing:-.03em;margin:0 0 8px}
   .wordcard p{color:#d6d3d1;font-size:13.5px;line-height:1.55;margin:6px 0}
   .wordcard b{color:#fff}
@@ -31,24 +31,28 @@
   .shoprow button{background:var(--ink);color:#fff;border:none;border-radius:999px;padding:6px 13px;font-weight:800;cursor:pointer;font-family:inherit;font-size:12.5px}
   .shoprow button:disabled{opacity:.35;cursor:default}
   .editor{background:#111827;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(2,6,23,.25);border:1px solid #020617}
+  .schema-editor{margin-top:14px}
+  .schema-editor pre{margin:0;padding:16px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:13.5px;line-height:1.65;color:#e5e7eb;white-space:pre-wrap;word-break:break-word;overflow:auto}
+  .xpchip{display:inline-flex;align-items:center;border-radius:999px;background:var(--accent);color:#fff;padding:2px 8px;font-size:11px;font-weight:900;letter-spacing:.02em;white-space:nowrap}
+  .diffchip{display:inline-flex;align-items:center;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent-border);padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap}
   .ebar{display:flex;gap:7px;align-items:center;padding:11px 14px;background:#020617}
   .ebar i{width:11px;height:11px;border-radius:50%;background:#334155;display:block}
   .ebar i:nth-child(1){background:#f87171}.ebar i:nth-child(2){background:#fbbf24}.ebar i:nth-child(3){background:#34d399}
   .ebar span{color:#94a3b8;font-size:12px;margin-left:8px;font-family:ui-monospace,Menlo,monospace}
   .edwrap{position:relative}
   .edwrap pre{margin:0;padding:16px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:14.5px;line-height:1.6;color:#e5e7eb;white-space:pre-wrap;word-break:break-word;min-height:130px;pointer-events:none}
-  .edwrap textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:transparent;color:transparent;caret-color:#f472b6;border:none;border-radius:0;box-shadow:none;resize:none;padding:16px}
+  .edwrap textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:transparent;color:transparent;caret-color:var(--syntax-kw);border:none;border-radius:0;box-shadow:none;resize:none;padding:16px}
   .edwrap textarea:focus{outline:none}
   .edwrap:focus-within{outline:2px solid var(--accent);outline-offset:0}
-  .kw{color:#f472b6}.fn{color:#93c5fd}.str{color:#86efac}.com{color:#64748b;font-style:italic}
+  .kw{color:var(--syntax-kw)}.fn{color:var(--syntax-fn)}.str{color:var(--syntax-str)}.com{color:#64748b;font-style:italic}
   @media(max-width:1100px){main{grid-template-columns:260px 1fr}#rail{grid-column:1/-1}}
   .buddyface{font-size:44px;line-height:1;text-align:center}
   aside{border:1px solid var(--line);border-radius:22px;padding:18px;background:var(--card);box-shadow:0 12px 32px rgba(28,25,23,.06);overflow-y:auto;max-height:calc(100vh - 110px)}
   aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--accent-ink);margin:16px 0 6px}
   aside h2:first-child{margin-top:0}
   .lessonbtn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:transparent;border:1px solid transparent;padding:10px 12px;margin-top:4px;cursor:pointer;font-family:inherit;font-size:13.5px;border-radius:12px;color:var(--ink)}
-  .lessonbtn:hover{background:#fafaf9}
-  .lessonbtn.active{background:var(--accent-soft);border-color:#fed7aa;font-weight:800;color:var(--accent-ink)}
+  .lessonbtn:hover{background:var(--accent-soft)}
+  .lessonbtn.active{background:var(--accent-soft);border-color:var(--accent-border);font-weight:800;color:var(--accent-ink)}
   .lessonbtn .done{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:bold;flex:none;animation:checkpop .5s cubic-bezier(.2,1.6,.4,1) both}
   @keyframes checkpop{from{transform:scale(.4);opacity:0}}
   section{padding:0;overflow-y:auto;max-height:calc(100vh - 110px)}
@@ -56,22 +60,22 @@
   .card h3{margin:0 0 8px;font-size:19px;letter-spacing:-.02em}
   .vocab{background:#fafaf9;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0;font-size:14.5px}
   .vocab b{color:var(--accent-ink)}
-  .sayit{background:var(--accent-soft);border:1px solid #fed7aa;border-radius:12px;padding:10px 14px;font-size:14.5px;margin-top:8px}
-  .tables{font-size:13px;color:#4c4636}
-  .tables code{background:#f5efe2;padding:1px 5px;border-radius:4px}
+  .sayit{background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:12px;padding:10px 14px;font-size:14.5px;margin-top:8px}
+  .tables{font-size:13px;color:var(--muted)}
+  .tables code{background:var(--accent-soft);padding:1px 5px;border-radius:4px}
   pre.schema{background:#111827;color:#e5e7eb;border-radius:16px;padding:14px 16px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap}
-  textarea{width:100%;min-height:130px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:14.5px;line-height:1.6;padding:16px;border:1px solid #020617;border-radius:16px;background:#111827;color:#e5e7eb;caret-color:#f472b6;box-shadow:0 12px 32px rgba(2,6,23,.25)}
+  textarea{width:100%;min-height:130px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:14.5px;line-height:1.6;padding:16px;border:1px solid #020617;border-radius:16px;background:#111827;color:#e5e7eb;caret-color:var(--syntax-kw);box-shadow:0 12px 32px rgba(2,6,23,.25)}
   textarea:focus{outline:2px solid var(--accent);outline-offset:2px}
   .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-  button.act{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:10px 20px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;box-shadow:3px 3px 0 rgba(28,25,23,.25)}
-  button.act:hover{background:#292524}
+  button.act{background:var(--accent-strong);color:#fff;border:1px solid var(--ink);padding:10px 20px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;box-shadow:3px 3px 0 rgba(28,25,23,.25)}
+  button.act:hover{background:var(--accent)}
   button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);padding:10px 16px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600}
   button.act:disabled{opacity:.5}
   #status{font-size:14px;min-height:20px;margin:6px 0}
   .ok{color:var(--green);font-weight:bold}.err{color:#b91c1c}
   table.res{border-collapse:collapse;font-size:13.5px;margin-top:8px;font-variant-numeric:tabular-nums}
   table.res th,table.res td{border:1px solid #f0ebe0;padding:7px 11px;text-align:left}
-  table.res th{background:#fafaf9;color:var(--muted);font-weight:700}
+  table.res th{background:var(--accent-soft);color:var(--muted);font-weight:700}
   .dbview table.res{margin:6px 0 14px}
   .dbview .tblwrap{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:16px;margin:4px 0 14px}
   .dbview .tblwrap table{margin:0;border:none;width:100%}
@@ -84,8 +88,8 @@
   details.slides .slide p{margin:3px 0;font-size:14px}
   details.slides pre{background:#111827;color:#e5e7eb;border-radius:12px;padding:10px 12px;font-size:12.5px;overflow-x:auto}
   details.slides .num{color:var(--accent);font-weight:bold}
-  .hintbox{display:none;background:var(--accent-soft);border:1px dashed #fdba74;border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace}
-  .tipbox{background:#f0f4f8;border:1px dashed #b8c9d9;border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:12px;color:#31445a}
+  .hintbox{display:none;background:var(--accent-soft);border:1px dashed var(--accent-border);border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tipbox{background:var(--accent-soft);border:1px dashed var(--accent-border);border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:12px;color:#31445a}
   .donatebox{margin-top:16px;text-align:center;font-size:13.5px;color:var(--muted)}
   .donatebox a{display:inline-block;background:#ffdd00;color:var(--ink);font-weight:800;text-decoration:none;padding:10px 18px;border-radius:999px;border:1px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
   .donatebox a:hover{background:#ffe94d;transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
@@ -538,29 +542,52 @@ let SQL, db, curDb, curLesson, done = JSON.parse(localStorage.getItem('speakSqlD
 
 function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); renderRail(); }
 // --- Mockup 02 features: XP, streak, theme changer, fritter buddy, word card ---
-const XP_PER_LESSON = 40;
 const THEMES = [
-  {name:'Orange (default)', accent:'#ea580c', ink:'#9a3412', soft:'#fff7ed'},
-  {name:'SQL Blue', accent:'#2563eb', ink:'#1e40af', soft:'#eff6ff'},
-  {name:'Matcha Green', accent:'#16a34a', ink:'#166534', soft:'#f0fdf4'},
-  {name:'Grape', accent:'#7c3aed', ink:'#5b21b6', soft:'#f5f3ff'},
-  {name:'Berry', accent:'#db2777', ink:'#9d174d', soft:'#fdf2f8'}
+  {name:'Orange (default)', paper:'#f6f3ec', line:'#e7e0d2', accent:'#ea580c', strong:'#c2410c', ink:'#9a3412', soft:'#fff7ed', pale:'#ffcfad', border:'#fed7aa', kw:'#f472b6', fn:'#2563eb', str:'#16a34a'},
+  {name:'SQL Blue', paper:'#edf4ff', line:'#c7dbf7', accent:'#2563eb', strong:'#1d4ed8', ink:'#1e3a8a', soft:'#dbeafe', pale:'#bfdbfe', border:'#93c5fd', kw:'#38bdf8', fn:'#818cf8', str:'#67e8f9'},
+  {name:'Matcha Green', paper:'#effaf1', line:'#ccebd3', accent:'#16a34a', strong:'#15803d', ink:'#14532d', soft:'#dcfce7', pale:'#bbf7d0', border:'#86efac', kw:'#22c55e', fn:'#0ea5e9', str:'#a3e635'},
+  {name:'Grape', paper:'#f4f0ff', line:'#ddd0fa', accent:'#7c3aed', strong:'#6d28d9', ink:'#4c1d95', soft:'#ede9fe', pale:'#ddd6fe', border:'#c4b5fd', kw:'#a78bfa', fn:'#818cf8', str:'#f0abfc'},
+  {name:'Berry', paper:'#fdf0f6', line:'#f5c6da', accent:'#db2777', strong:'#be185d', ink:'#831843', soft:'#fce7f3', pale:'#fbcfe8', border:'#f9a8d4', kw:'#f472b6', fn:'#c084fc', str:'#fb7185'}
 ];
 const BUDDIES = [
   {id:'none', name:'No buddy yet', face:'🥚', cost:0, line:'Complete lessons to earn XP, then adopt a buddy below.'},
-  {id:'donut', name:'Donut Buddy', face:'🍩', cost:200, line:'Donut Buddy believes in you. Quietly. With sprinkles.'},
+  {id:'crumb', name:'Crumb Pup', face:'🐶', cost:75, line:'Crumb Pup is small, loyal, and weirdly good at spotting missing commas.'},
+  {id:'donut', name:'Donut Buddy', face:'🍩', cost:180, line:'Donut Buddy believes in you. Quietly. With sprinkles.'},
+  {id:'croissant', name:'Croissant Cat', face:'🐱', cost:320, line:'Croissant Cat judges sloppy aliases, but she loves you anyway.'},
   {id:'fritter', name:'Apple Fritter', face:'🍎', cost:480, line:'Apple Fritter has read the schema twice. She is ready when you are.'},
-  {id:'golden', name:'Golden Fritter', face:'👑', cost:960, line:'The Golden Fritter does not explain SQL. She simply knows.'}
+  {id:'pancake', name:'Pancake Bunny', face:'🐰', cost:680, line:'Pancake Bunny stacks wins, then asks for one more practice rep.'},
+  {id:'golden', name:'Golden Fritter', face:'👑', cost:900, line:'The Golden Fritter does not explain SQL. She simply knows.'},
+  {id:'owl', name:'Query Owl', face:'🦉', cost:1100, line:'Query Owl has seen every join. Nothing rattles her.'}
 ];
 let themeIdx = parseInt(localStorage.getItem('speakSqlTheme')||'0',10)||0;
 let buddyId = localStorage.getItem('speakSqlBuddy')||'none';
 let xpSpent = parseInt(localStorage.getItem('speakSqlSpent')||'0',10)||0;
-function xpEarned(){ return Object.keys(done).length * XP_PER_LESSON; }
-function xpBalance(){ return xpEarned() - xpSpent; }
+let ownedBuddies = JSON.parse(localStorage.getItem('speakSqlOwned')||'[]');
+if(buddyId !== 'none' && !ownedBuddies.includes(buddyId)) ownedBuddies.push(buddyId);
+function lessonDifficulty(l){
+  if(l.id.startsWith('0.')) return {label:'Warm-up', xp:15};
+  if(l.id === '5.3') return {label:'Debug challenge', xp:65};
+  if(l.id.endsWith('.5')) return {label:'Advanced', xp:80};
+  if(l.id.endsWith('.4')) return {label:'Deep cut', xp:50};
+  if(l.id.endsWith('.3')) return {label:'Thinker', xp:40};
+  if(l.id.endsWith('.2')) return {label:'Builder', xp:35};
+  return {label:'Core concept', xp:30};
+}
+function xpForKey(key){
+  const [dbId, lessonId] = key.split(':');
+  const d = DATABASES.find(x=>x.id===dbId); const l = d && d.lessons.find(x=>x.id===lessonId);
+  return l ? lessonDifficulty(l).xp : 0;
+}
+function xpEarned(){ return Object.keys(done).filter(k=>done[k]).reduce((sum,k)=>sum+xpForKey(k),0); }
+function totalXp(){ return DATABASES.reduce((sum,d)=>sum+d.lessons.reduce((s,l)=>s+lessonDifficulty(l).xp,0),0); }
+function xpBalance(){ return Math.max(0, xpEarned() - xpSpent); }
 function applyTheme(){
   const t = THEMES[themeIdx] || THEMES[0];
   const r = document.documentElement.style;
-  r.setProperty('--accent', t.accent); r.setProperty('--accent-ink', t.ink); r.setProperty('--accent-soft', t.soft);
+  r.setProperty('--paper', t.paper); r.setProperty('--line', t.line);
+  r.setProperty('--accent', t.accent); r.setProperty('--accent-strong', t.strong); r.setProperty('--accent-ink', t.ink);
+  r.setProperty('--accent-soft', t.soft); r.setProperty('--accent-pale', t.pale); r.setProperty('--accent-border', t.border);
+  r.setProperty('--syntax-kw', t.kw); r.setProperty('--syntax-fn', t.fn); r.setProperty('--syntax-str', t.str);
 }
 function noteDay(){
   const today = new Date().toLocaleDateString('en-CA');
@@ -582,7 +609,7 @@ function renderRail(){
   const w = l.vocab[0] || ['SQL','Structured Query Language: the language databases answer to.'];
   el.innerHTML = `
     <div class="wordcard">
-      <p class="kicker">WORD OF THE LESSON</p>
+      <p class="kicker">TERM OF THE LESSON</p>
       <p class="word">${w[0]}</p>
       <p><b>Define it:</b> ${w[1]}</p>
       <p><b>Use it:</b> ${l.sayit}</p>
@@ -592,30 +619,36 @@ function renderRail(){
       <h3 style="margin:8px 0 4px">${b.name}</h3>
       <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${b.line}</p>
       <div class="bignum" style="color:var(--accent)">${xpEarned().toLocaleString()} XP</div>
-      <p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">+${XP_PER_LESSON} XP per completed lesson · balance ${xpBalance().toLocaleString()} XP</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">This lesson: <b>${lessonDifficulty(l).label}</b> · +${lessonDifficulty(l).xp} XP · balance ${xpBalance().toLocaleString()} of ${totalXp().toLocaleString()} XP</p>
       <p style="margin:12px 0 0;font-size:13px"><b>Daily streak</b></p>
       <div class="bignum">${s} day${s===1?'':'s'}</div>
       <p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">Complete a lesson today to keep it alive.</p>
-      ${BUDDIES.slice(1).map(x=>`<div class="shoprow"><span>${x.face} ${x.name} · ${x.cost} XP</span>${buddyId===x.id?'<b style="color:var(--green)">Yours ✓</b>':`<button data-buy="${x.id}" ${xpBalance()<x.cost?'disabled':''}>Buy</button>`}</div>`).join('')}
+      ${BUDDIES.slice(1).map(x=>`<div class="shoprow"><span>${x.face} ${x.name} · ${x.cost} XP</span>${buddyId===x.id?'<b style="color:var(--green)">Hanging out ✓</b>':ownedBuddies.includes(x.id)?`<button data-adopt="${x.id}">Hang out</button>`:`<button data-buy="${x.id}" ${xpBalance()<x.cost?'disabled':''}>Buy</button>`}</div>`).join('')}
     </div>
     <div class="railcard">
       <h3 style="margin:0">Make it yours</h3>
       <p style="font-size:13px;color:var(--muted);margin:6px 0 0">Accent color. Saved on this device.</p>
-      <div class="themedots">${THEMES.map((t,i)=>`<button class="themedot ${i===themeIdx?'sel':''}" data-theme="${i}" title="${t.name}" style="background:${t.accent}"></button>`).join('')}</div>
+      <div class="themedots">${THEMES.map((t,i)=>`<button class="themedot ${i===themeIdx?'sel':''}" data-theme="${i}" title="${t.name}" style="background:linear-gradient(135deg, ${t.accent} 0 58%, ${t.pale} 58%)"></button>`).join('')}</div>
     </div>`;
   el.querySelectorAll('[data-theme]').forEach(btn=>btn.onclick=()=>{ themeIdx=parseInt(btn.dataset.theme,10); localStorage.setItem('speakSqlTheme', String(themeIdx)); applyTheme(); renderRail(); });
   el.querySelectorAll('[data-buy]').forEach(btn=>btn.onclick=()=>{
     const x = BUDDIES.find(y=>y.id===btn.dataset.buy);
     if(!x || xpBalance() < x.cost) return;
-    xpSpent += x.cost; buddyId = x.id;
-    localStorage.setItem('speakSqlSpent', String(xpSpent)); localStorage.setItem('speakSqlBuddy', buddyId);
-    renderRail(); setStatus(x.face+' '+x.name+' adopted. '+x.line,'ok');
+    xpSpent += x.cost; buddyId = x.id; ownedBuddies.push(x.id);
+    localStorage.setItem('speakSqlSpent', String(xpSpent)); localStorage.setItem('speakSqlBuddy', buddyId); localStorage.setItem('speakSqlOwned', JSON.stringify(ownedBuddies));
+    renderRail(); setStatus(x.face+' '+x.name+' unlocked. '+x.line,'ok');
+  });
+  el.querySelectorAll('[data-adopt]').forEach(btn=>btn.onclick=()=>{
+    const x = BUDDIES.find(y=>y.id===btn.dataset.adopt);
+    if(!x || !ownedBuddies.includes(x.id)) return;
+    buddyId = x.id; localStorage.setItem('speakSqlBuddy', buddyId);
+    renderRail(); setStatus(x.face+' '+x.name+' is on shift. '+x.line,'ok');
   });
 }
 // Syntax highlighting for the editor (mockup colors: keywords pink, functions blue, strings green)
 function hlSql(src){
   let s = src.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  s = s.replace(/(--[^\n]*)|('(?:[^']|'')*')|\b(SELECT|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|INNER\s+JOIN|ON|AS|CASE|WHEN|THEN|ELSE|END|WITH|UNION\s+ALL|UNION|DISTINCT|AND|OR|NOT|NULL|IS|IN|OVER|PARTITION\s+BY|CAST|DESC|ASC|BETWEEN|LIKE|BY)\b|\b(SUM|COUNT|AVG|ROUND|LAG|LEAD|RANK|DENSE_RANK|ROW_NUMBER|COALESCE|MAX|MIN|julianday|printf)\s*(?=\()/gi,
+  s = s.replace(/(--[^\n]*)|('(?:[^']|'')*')|\b(CREATE\s+TABLE|PRIMARY\s+KEY|SELECT|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|INNER\s+JOIN|ON|AS|CASE|WHEN|THEN|ELSE|END|WITH|UNION\s+ALL|UNION|DISTINCT|AND|OR|NOT|NULL|IS|IN|OVER|PARTITION\s+BY|CAST|DESC|ASC|BETWEEN|LIKE|BY|CREATE|TABLE|PRIMARY|KEY|INTEGER|TEXT|REAL)\b|\b(SUM|COUNT|AVG|ROUND|LAG|LEAD|RANK|DENSE_RANK|ROW_NUMBER|COALESCE|MAX|MIN|julianday|printf)\s*(?=\()/gi,
     (m, com, str, kw, fn) => com ? '<span class="com">'+com+'</span>' : str ? '<span class="str">'+str+'</span>' : kw ? '<span class="kw">'+kw+'</span>' : '<span class="fn">'+fn+'</span>');
   return s + '\n';
 }
@@ -641,7 +674,7 @@ function loadDb(d){
 function renderSidebar(){
   const sb = document.getElementById('sidebar');
   sb.innerHTML = DATABASES.map(d=>{
-    const lessons = d.lessons.map(l=>`<button class="lessonbtn ${curLesson&&curLesson.id===l.id&&curDb===d?'active':''}" data-db="${d.id}" data-lesson="${l.id}">${done[d.id+':'+l.id]?'<span class="done">✓</span> ':''}${l.id} ${l.title}</button>`).join('');
+    const lessons = d.lessons.map(l=>`<button class="lessonbtn ${curLesson&&curLesson.id===l.id&&curDb===d?'active':''}" data-db="${d.id}" data-lesson="${l.id}"><span>${done[d.id+':'+l.id]?'<span class="done">✓</span> ':''}${l.id} ${l.title}</span><span class="diffchip">${lessonDifficulty(l).xp} XP</span></button>`).join('');
     return `<h2>${d.name}</h2>${lessons}`;
   }).join('') + `<div class="donatebox"><a href="${DONATE_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a><div style="margin-top:6px">Keeps the lessons free.</div></div>`;
   sb.querySelectorAll('.lessonbtn').forEach(b=>b.onclick=()=>{
@@ -756,12 +789,12 @@ function storyCard(d, l){
   const isEp1 = (d.id==='coffee' && l.id==='1.1');
   return `<div class="card">
     <h3>📖 ${isEp1?'Episode 1, as a story':'The story behind this lesson'} (STAR+L)</h3>
-    ${isEp1?'<p style="font-size:13.5px;color:#4c4636;margin-top:0">This is the slide deck rewritten as paragraphs — the same situation you’re about to solve below.</p>':''}
-    <p><b style="color:#9a3412">Situation —</b> ${s.s}</p>
-    <p><b style="color:#9a3412">Task —</b> ${s.t}</p>
-    <p><b style="color:#9a3412">Action —</b> ${s.a}</p>
-    <p><b style="color:#9a3412">Result —</b> ${s.r}</p>
-    <p style="margin-bottom:0"><b style="color:#9a3412">Learning —</b> ${s.l}</p>
+    ${isEp1?'<p style="font-size:13.5px;color:var(--muted);margin-top:0">This is the slide deck rewritten as paragraphs — the same situation you’re about to solve below.</p>':''}
+    <p><b style="color:var(--accent-ink)">Situation —</b> ${s.s}</p>
+    <p><b style="color:var(--accent-ink)">Task —</b> ${s.t}</p>
+    <p><b style="color:var(--accent-ink)">Action —</b> ${s.a}</p>
+    <p><b style="color:var(--accent-ink)">Result —</b> ${s.r}</p>
+    <p style="margin-bottom:0"><b style="color:var(--accent-ink)">Learning —</b> ${s.l}</p>
   </div>`;
 }
 function showLesson(d, l){
@@ -771,26 +804,27 @@ function showLesson(d, l){
   const m = META[l.id] || {};
   stage.innerHTML = `
     <div class="card">
-      <h3>${d.name} — Lesson ${l.id}: ${l.title} ${l.worked?'<small style="color:#9a3412">(worked example — build it from the steps; the full version waits in the last hint)</small>':''}</h3>
-      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">① Situation — someone needs a solution</p>
+      <h3>${d.name} — Lesson ${l.id}: ${l.title} ${l.worked?'<small style="color:var(--accent-ink)">(worked example — build it from the steps; the full version waits in the last hint)</small>':''}</h3>
+      <p style="margin:0 0 10px"><span class="diffchip">${lessonDifficulty(l).label}</span> <span class="xpchip">+${lessonDifficulty(l).xp} XP</span></p>
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">① Situation — someone needs a solution</p>
       <p><em>${d.story}</em></p>
-      ${m.ask?`<p style="background:#fdf6e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 14px"><b>${m.asker} asks:</b> ${m.ask}</p>`:''}
-      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">② Task — what actually has to be done</p>
+      ${m.ask?`<p style="background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px"><b>${m.asker} asks:</b> ${m.ask}</p>`:''}
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">② Task — what actually has to be done</p>
       ${(m.task||[l.problem]).map(t=>`<p style="margin:4px 0">• ${t}</p>`).join('')}
-      <pre class="schema">${tbl.replace(/</g,'&lt;')}</pre>
+      <div class="editor schema-editor"><div class="ebar"><i></i><i></i><i></i><span>schema — ${d.id} · CREATE TABLE</span></div><pre>${hlSql(tbl)}</pre></div>
     </div>
     ${storyCard(d,l)}
     <div class="card dbview">
       <h3>📊 The database you’re working with</h3>
-      <p style="font-size:13.5px;color:#4c4636;margin-top:0">This is the live data your query runs against. Edit it by accident? Hit Reset — this view refreshes so you can always see the starting truth.</p>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:0">This is the live data your query runs against. Edit it by accident? Hit Reset — this view refreshes so you can always see the starting truth.</p>
       <div id="dbview"></div>
     </div>
     <div class="card">
-      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">③ Action — write the SQL that gets that result</p>
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">③ Action — write the SQL that gets that result</p>
       <h3>Example problem</h3><p>${l.problem}</p>
       <details style="margin:0 0 10px">
-        <summary style="cursor:pointer;font-weight:bold;color:#9a3412;font-size:14px">Hints — how to think through the task (open when stuck)</summary>
-        <div style="background:#f4efe2;border:1px dashed #e8b33d;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:14px">
+        <summary style="cursor:pointer;font-weight:bold;color:var(--accent-ink);font-size:14px">Hints — how to think through the task (open when stuck)</summary>
+        <div style="background:var(--accent-soft);border:1px dashed var(--accent-border);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:14px">
           ${(m.task||[l.problem]).map((t,i)=>`<p style="margin:4px 0"><b>Step ${i+1}:</b> ${t}</p>`).join('')}
           <p style="margin:6px 0 0"><b>Read it aloud first:</b> if you cannot say what one row of the output means, the grain is wrong.</p>
           <details style="margin-top:10px">
@@ -799,7 +833,7 @@ function showLesson(d, l){
           </details>
         </div>
       </details>
-      <p style="font-size:13px;color:#6b6250;margin:0 0 6px">Start by looking at the data — the editor begins with <code>SELECT *</code> on this database’s first table. Run it, read the table, then build the real query.</p>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 6px">Start by looking at the data — the editor begins with <code>SELECT *</code> on this database’s first table. Run it, read the table, then build the real query.</p>
       <div class="editor"><div class="ebar"><i></i><i></i><i></i><span id="edlabel">editor</span></div><div class="edwrap"><pre id="hlcode" aria-hidden="true"></pre><textarea id="sqlbox" spellcheck="false"></textarea></div></div>
       <div class="btnrow">
         <button class="act" id="run">▶ Run query</button>
@@ -810,10 +844,10 @@ function showLesson(d, l){
       <div id="status"></div>
       <div id="out"></div>
     </div>
-    <div class="card" style="border-color:#9a3412">
-      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">④ Result — what the right answer shows</p>
+    <div class="card" style="border-color:var(--accent-ink)">
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">④ Result — what the right answer shows</p>
       ${m.result?`<p>${m.result}</p>`:'<p>Run the query above and compare the output to the problem: does it actually answer the ask?</p>'}
-      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">⑤ Learning — what we learned</p>
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">⑤ Learning — what we learned</p>
       <p style="margin:4px 0"><b>About the SQL:</b> ${m.learnSql||''}</p>
       <div class="sayit">Say it like you work there: ${l.sayit}</div>
       ${m.tip?`<div class="tipbox">💡 <b>Background tip — both are allowed:</b> ${m.tip}</div>`:''}
@@ -847,7 +881,7 @@ function runQuery(){
     const {columns, values} = res[0];
     out.innerHTML = `<table class="res"><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr>${values.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table>`;
     const ok = checkResult(res, curLesson);
-    if(ok===true){ done[curDb.id+':'+curLesson.id]=true; noteDay(); saveDone(); setStatus('✓ Correct. That matches the expected result, +'+XP_PER_LESSON+' XP earned. Say the sentence out loud before you move on.','ok'); }
+    if(ok===true){ done[curDb.id+':'+curLesson.id]=true; noteDay(); saveDone(); setStatus('✓ Correct. That matches the expected result, +'+lessonDifficulty(curLesson).xp+' XP earned. Say the sentence out loud before you move on.','ok'); }
     else if(ok===false){ setStatus('Ran fine, but the result doesn’t match the problem yet. Check your grain, then your filter. Reset and retry if the data got edited.','err'); }
     else setStatus('Ran. Compare it against the problem statement — does it actually answer it?','ok');
   }catch(e){ setStatus('SQL error: '+e.message+' — read it literally; it usually names the exact line that broke.','err'); out.innerHTML=''; }
