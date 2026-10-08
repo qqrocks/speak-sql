@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speak SQL — Real-Life Lessons</title>
+<style>
+  :root{--ink:#16211a;--green:#1f7a4d;--paper:#f7f4ec;--card:#fff;--line:#ddd6c4;--gold:#e8b33d}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink)}
+  header{background:var(--ink);color:var(--paper);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  header h1{margin:0;font-size:22px;letter-spacing:.5px}
+  header h1 span{color:var(--gold)}
+  .pbar-wrap{min-width:220px}
+  .pbar{height:10px;background:#2e4237;border-radius:5px;overflow:hidden}
+  .pbar>div{height:100%;background:var(--gold);width:0%;transition:width .3s}
+  .pbar-label{font-size:12px;text-align:right;margin-top:3px}
+  main{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:calc(100vh - 62px)}
+  aside{border-right:1px solid var(--line);padding:14px;background:#efe9da;overflow-y:auto;max-height:calc(100vh - 62px)}
+  aside h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin:14px 0 6px}
+  .dbbtn{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer;font-family:inherit;font-size:14px}
+  .dbbtn.active{border-color:var(--green);box-shadow:inset 3px 0 0 var(--green)}
+  .dbbtn small{display:block;color:#6b6250;font-size:12px;margin-top:2px}
+  .lessonbtn{display:block;width:100%;text-align:left;background:transparent;border:none;border-left:3px solid transparent;padding:6px 8px;cursor:pointer;font-family:inherit;font-size:13.5px;border-radius:0 6px 6px 0}
+  .lessonbtn.active{background:#fff;border-left-color:var(--gold)}
+  .lessonbtn .done{color:var(--green);font-weight:bold}
+  section{padding:20px 24px;overflow-y:auto;max-height:calc(100vh - 62px)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .card h3{margin:0 0 8px;font-size:17px}
+  .vocab{background:#eef5f0;border:1px solid #cfe3d6;border-radius:8px;padding:10px 14px;margin:8px 0;font-size:14.5px}
+  .vocab b{color:var(--green)}
+  .sayit{background:#fdf6e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 14px;font-style:italic;font-size:14.5px;margin-top:8px}
+  .tables{font-size:13px;color:#4c4636}
+  .tables code{background:#f0ead8;padding:1px 5px;border-radius:4px}
+  pre.schema{background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 14px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap}
+  textarea{width:100%;min-height:120px;font-family:'Courier New',monospace;font-size:14px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffef8}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  button.act{background:var(--green);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px}
+  button.act:disabled{opacity:.5}
+  #status{font-size:14px;min-height:20px;margin:6px 0}
+  .ok{color:var(--green);font-weight:bold}.err{color:#b03a2e}
+  table.res{border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  table.res th,table.res td{border:1px solid var(--line);padding:5px 10px;text-align:left}
+  table.res th{background:#efe9da}
+  .dbview table.res{margin:6px 0 14px}
+  .dbview .tblwrap{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:4px 0 14px}
+  .dbview .tblwrap table{margin:0;border:none;width:100%}
+  .dbview .tblwrap th{position:sticky;top:0}
+  .dbview h4{margin:10px 0 2px;font-size:14.5px;color:var(--green)}
+  .dbview .rowcount{font-size:12px;color:#6b6250}
+  details.slides summary{cursor:pointer;font-weight:bold;font-size:15px;color:var(--green)}
+  details.slides .slide{border-top:1px dashed var(--line);padding:10px 2px}
+  details.slides .slide h4{margin:2px 0 4px;font-size:14.5px}
+  details.slides .slide p{margin:3px 0;font-size:14px}
+  details.slides pre{background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto}
+  details.slides .num{color:var(--gold);font-weight:bold}
+  .hintbox{display:none;background:#f4efe2;border:1px dashed var(--gold);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;font-family:'Courier New',monospace}
+  .tipbox{background:#f0f4f8;border:1px dashed #b8c9d9;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px;color:#31445a}
+  .donatebox{margin-top:16px;text-align:center;font-size:13.5px;color:#6b6250}
+  .donatebox a{display:inline-block;background:#ffdd00;color:#1c2620;font-weight:bold;text-decoration:none;padding:9px 18px;border-radius:999px;border:1px solid #e8c400}
+  .donatebox a:hover{background:#ffe94d}
+  aside .donatebox{padding:12px 6px 4px;border-top:1px solid #e3ddcb;margin-top:14px}
+  @media(max-width:800px){main{grid-template-columns:1fr}aside,section{max-height:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Speak <span>SQL</span> — learn it by saying it</h1>
+  <div class="pbar-wrap">
+    <div class="pbar"><div id="pfill"></div></div>
+    <div class="pbar-label" id="plabel">0 / 28 lessons</div>
+  </div>
+</header>
+<main>
+  <aside id="sidebar"></aside>
+  <section id="stage">
+    <div class="card"><h3>Loading the SQL engine…</h3><p>If this stays here, check your internet connection (the SQLite engine loads from a CDN) and reload.</p></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+<script>
+const DATABASES = [
+{ id:'coffee', name:'☕ The Coffee Shop', tag:'GROUP BY · HAVING · DISTINCT',
+  story:'Which drink actually makes this shop money — and which one just looks popular?',
+  schema:`CREATE TABLE orders (
+  order_id INTEGER PRIMARY KEY, customer_name TEXT,
+  drink TEXT, size TEXT, price REAL, ordered_at TEXT
+);`,
+  seed:`INSERT INTO orders (customer_name, drink, size, price, ordered_at) VALUES
+('Maya','latte','M',5.50,'2026-10-01'),('Jordan','cold brew','L',5.00,'2026-10-01'),
+('Maya','latte','M',5.50,'2026-10-02'),('Sam','matcha','M',6.00,'2026-10-02'),
+('Priya','espresso','S',3.50,'2026-10-02'),('Jordan','cold brew','L',5.00,'2026-10-03'),
+('Alex','latte','L',6.50,'2026-10-03'),('Sam','matcha','M',6.00,'2026-10-03'),
+('Priya','latte','M',5.50,'2026-10-04'),('Alex','espresso','S',3.50,'2026-10-04'),
+('Maya','cold brew','M',4.50,'2026-10-05'),('Sam','latte','M',5.50,'2026-10-05'),
+('Priya','matcha','L',7.00,'2026-10-05'),('Jordan','espresso','S',3.50,'2026-10-06'),
+('Alex','cold brew','L',5.00,'2026-10-06');`,
+  lessons:[
+   {id:'0.1', title:'SELECT — just look at the data',
+    vocab:[['SELECT','the verb that reads data. SELECT * means “every column.” Naming columns means “just these.”'],['Table / row / column','a table is the grid; a row is one record; a column is one fact per record.']],
+    problem:'Show only drink, size, and price for every order. No filtering, no math — just look.',
+    starter:`SELECT drink, size, price
+FROM orders;`,
+    sayit:'“Before I analyze anything, I look at the raw rows — grain first, questions second.”',
+    expect:null},
+   {id:'0.2', title:'WHERE — keep only the rows you mean',
+    vocab:[['WHERE','filters rows before anything else happens. The condition is a yes/no test per row.'],['String literal','text values go in single quotes: drink = ’latte’. Numbers don’t.']],
+    problem:'List customer, drink, and price for latte orders only.',
+    starter:`SELECT customer_name, drink, price
+FROM orders
+WHERE drink = 'latte';`,
+    sayit:'“I filtered at the row level — WHERE decides which orders even enter the room.”',
+    expect:[['Alex','latte',6.5],['Maya','latte',5.5],['Maya','latte',5.5],['Priya','latte',5.5],['Sam','latte',5.5]]},
+   {id:'0.3', title:'ORDER BY + LIMIT — biggest first, top few',
+    vocab:[['ORDER BY','sorts the result. DESC = biggest/highest first; ASC = smallest first.'],['LIMIT','caps how many rows come back. ORDER BY + LIMIT = every “top N” answer ever.']],
+    problem:'The three most expensive orders in the shop: customer, drink, price, priciest first.',
+    starter:`SELECT customer_name, drink, price
+FROM orders
+ORDER BY price DESC
+LIMIT 3;`,
+    sayit:'“Top three by price — I sorted before I limited, or the ‘top’ would be random rows.”',
+    expect:null},
+   {id:'1.1', title:'GROUP BY — revenue per drink', worked:true,
+    vocab:[['Grain','the level of detail one row represents. Here: one row = one order. Say it before you query.'],['Dimension vs measure','dimension = what you slice by (drink); measure = what you add up (price).'],['Aggregate function','SUM / COUNT / AVG — many values in, one number out, per group.']],
+    problem:'Revenue and order count per drink, biggest revenue first.',
+    starter:`SELECT drink, COUNT(*) AS orders, ROUND(SUM(price),2) AS revenue
+FROM orders
+GROUP BY drink
+ORDER BY revenue DESC;`,
+    sayit:'“I’d cut revenue by drink at the order grain before I touch the menu — blended sales hide which item is carrying the shop.”',
+    expect:[['latte',5,28.5],['cold brew',4,19.5],['matcha',3,19],['espresso',3,10.5]]},
+   {id:'1.2', title:'HAVING — only the proven sellers',
+    vocab:[['HAVING','filters groups AFTER aggregation. WHERE filters rows before. Using WHERE on an aggregate is the classic trap.']],
+    problem:'Same revenue-per-drink table, but only drinks with 4 or more orders.',
+    starter:`SELECT drink, COUNT(*) AS n, ROUND(SUM(price),2) AS revenue
+FROM orders
+GROUP BY drink
+-- your HAVING line here
+ORDER BY revenue DESC;`,
+    sayit:'“WHERE can’t see a group total — that’s HAVING’s job, and interviewers listen for exactly this.”',
+    expect:[['latte',5,28.5],['cold brew',4,19.5]]},
+   {id:'1.3', title:'DISTINCT — count people, not rows',
+    vocab:[['COUNT(DISTINCT …)','counts real entities. COUNT(*) counts rows, duplicates included.']],
+    problem:'How many distinct customers ordered each drink? (Latte = 4: Maya, Alex, Priya, Sam — Maya came twice.)',
+    starter:`SELECT drink, COUNT(DISTINCT customer_name) AS customers
+FROM orders
+GROUP BY drink
+ORDER BY customers DESC;`,
+    sayit:'“COUNT(*) told me five lattes; COUNT(DISTINCT) told me four people. Different question, different answer.”',
+    expect:[['latte',4],['cold brew',3],['matcha',2],['espresso',3]]},
+   {id:'1.4', title:'Two-column GROUP BY — drink × size',
+    vocab:[['Two-column GROUP BY','group by two dimensions at once: one row per combination.']],
+    problem:'Order count and revenue for every drink-and-size combination.',
+    starter:`SELECT drink, size, COUNT(*) AS n, ROUND(SUM(price),2) AS revenue
+FROM orders
+GROUP BY drink, size
+ORDER BY drink, revenue DESC;`,
+    sayit:'“Same data, finer grain — the size split is where the pricing story lives.”',
+    expect:[['cold brew','L',3,15],['cold brew','M',1,4.5],['espresso','S',3,10.5],['latte','L',1,6.5],['latte','M',4,22],['matcha','L',1,7],['matcha','M',2,12]]},
+   {id:'1.5', title:'Daily trend — revenue by day',
+    vocab:[['Time bucket','grouping by a date column turns a table into a trend. One row per day = the day grain.'],['Trend vs total','a total tells you how much; a trend tells you which direction and how steadily.']],
+    problem:'Orders and revenue per day, in date order. Is the shop growing, or was one day just loud?',
+    starter:`SELECT ordered_at, COUNT(*) AS orders, ROUND(SUM(price),2) AS revenue
+FROM orders
+GROUP BY ordered_at
+ORDER BY ordered_at;`,
+    sayit:'“At the day grain, revenue oscillates between $8.50 and $17.50 — six days is weather, not a trend, and I’d say so.”',
+    expect:[['2026-10-01',2,10.5],['2026-10-02',3,15],['2026-10-03',3,17.5],['2026-10-04',2,9],['2026-10-05',3,17],['2026-10-06',2,8.5]]}
+  ]},
+{ id:'creator', name:'🎬 Creator Studio', tag:'Window functions · CTR · LAG',
+  story:'My views went up but my channel is doing worse — here’s the query that shows it.',
+  schema:`CREATE TABLE posts (
+  post_id INTEGER PRIMARY KEY, platform TEXT, title TEXT,
+  posted_at TEXT, views INTEGER, clicks INTEGER, watch_seconds INTEGER
+);`,
+  seed:`INSERT INTO posts (platform, title, posted_at, views, clicks, watch_seconds) VALUES
+('YouTube','SQL in 60 seconds','2026-09-07',1200,96,41000),
+('YouTube','GROUP BY without tears','2026-09-14',1850,130,72000),
+('YouTube','The NULL trap','2026-09-21',2400,144,81000),
+('YouTube','Window functions, simply','2026-09-28',3100,155,99000),
+('TikTok','SQL in 60 seconds','2026-09-07',8400,210,61000),
+('TikTok','GROUP BY without tears','2026-09-14',11200,224,74000),
+('TikTok','The NULL trap','2026-09-21',15800,237,92000),
+('TikTok','Window functions, simply','2026-09-28',19900,259,118000),
+('Instagram','SQL in 60 seconds','2026-09-07',3100,155,28000),
+('Instagram','GROUP BY without tears','2026-09-14',3600,162,31000),
+('Instagram','The NULL trap','2026-09-21',4200,168,34000),
+('Instagram','Window functions, simply','2026-09-28',4700,179,39000);`,
+  lessons:[
+   {id:'2.1', title:'Window functions — CTR + running total', worked:true,
+    vocab:[['CTR — click-through rate','clicks ÷ views. Measures pull. Falling CTR + flat views = title/thumbnail fatigue.'],['Window function','adds a computed column WITHOUT collapsing rows. GROUP BY shrinks; windows annotate.']],
+    problem:'Per post: CTR %, plus cumulative (running) views per platform over time.',
+    starter:`SELECT platform, title, views,
+       ROUND(100.0*clicks/views,1) AS ctr_pct,
+       SUM(views) OVER (PARTITION BY platform ORDER BY posted_at) AS running_views
+FROM posts
+ORDER BY platform, posted_at;`,
+    sayit:'“CTR is softening while views climb, so my first hypothesis is creative fatigue, not the algorithm punishing me.”',
+    expect:null},
+   {id:'2.2', title:'LAG — week-over-week change',
+    vocab:[['LAG','pulls the previous row’s value into this row. Period-over-period without a self-join.']],
+    problem:'Per platform, how many views did each post gain over the previous post?',
+    starter:`SELECT platform, posted_at, views,
+       views - LAG(views) OVER (PARTITION BY platform ORDER BY posted_at) AS wow_change
+FROM posts
+ORDER BY platform, posted_at;`,
+    sayit:'“LAG turns ‘are we growing?’ into a column instead of a vibe.”',
+    expect:null},
+   {id:'2.3', title:'RANK — best post per platform',
+    vocab:[['RANK vs ROW_NUMBER','RANK leaves gaps after ties (1,2,2,4); ROW_NUMBER never ties. Know which the question wants.']],
+    problem:'Rank posts by views within each platform, best = 1.',
+    starter:`SELECT platform, title, views,
+       RANK() OVER (PARTITION BY platform ORDER BY views DESC) AS rnk
+FROM posts
+ORDER BY platform, rnk;`,
+    sayit:'“Window functions let me rank within each platform without collapsing the detail.”',
+    expect:null},
+   {id:'2.4', title:'The real question — CTR by platform',
+    vocab:[['Segmentation','a blended number is usually one segment doing something explainable. Always cut it.']],
+    problem:'Average CTR per platform. Which audience actually clicks? (YouTube 6.1%, Instagram 4.3%, TikTok 1.7%.)',
+    starter:`SELECT platform, ROUND(100.0*SUM(clicks)/SUM(views),1) AS ctr_pct
+FROM posts
+GROUP BY platform
+ORDER BY ctr_pct DESC;`,
+    sayit:'“The biggest platform converts worst. Reach isn’t pull — say the segment, not the blend.”',
+    expect:[['YouTube',6.1],['Instagram',4.3],['TikTok',1.7]]},
+   {id:'2.5', title:'Share of platform — each post’s slice',
+    vocab:[['Percent of total','a row’s value divided by its group’s total. Needs the total computed alongside every row — window territory.'],['SUM() OVER (PARTITION BY …)','a group total attached to each row without collapsing the group.']],
+    problem:'For YouTube only: each post’s views, and its % share of YouTube’s total views.',
+    starter:`SELECT platform, title, views,
+       ROUND(100.0*views/SUM(views) OVER (PARTITION BY platform),1) AS pct_of_platform
+FROM posts
+WHERE platform = 'YouTube'
+ORDER BY posted_at;`,
+    sayit:'“The newest post is 36.3% of the channel’s views — concentration is opportunity and risk in the same number.”',
+    expect:null}
+  ]},
+{ id:'store', name:'🛍️ Side Hustle Store', tag:'JOINS · CAC · LTV · ROAS',
+  story:'I spent $355 on ads and made $910 — did I actually profit?',
+  schema:`CREATE TABLE customers (customer_id INTEGER PRIMARY KEY, name TEXT, signup_date TEXT, channel TEXT);
+CREATE TABLE orders (order_id INTEGER PRIMARY KEY, customer_id INTEGER, amount REAL, ordered_at TEXT);
+CREATE TABLE ad_spend (spend_date TEXT, channel TEXT, spend REAL);`,
+  seed:`INSERT INTO customers VALUES
+(1,'Maya','2026-09-02','instagram'),(2,'Jordan','2026-09-05','instagram'),
+(3,'Sam','2026-09-09','tiktok'),(4,'Priya','2026-09-12','tiktok'),
+(5,'Alex','2026-09-15','organic'),(6,'Rin','2026-09-18','instagram'),
+(7,'Theo','2026-09-21','organic'),(8,'Nia','2026-09-24','tiktok');
+INSERT INTO orders (customer_id, amount, ordered_at) VALUES
+(1,45.00,'2026-09-03'),(1,60.00,'2026-09-20'),(2,80.00,'2026-09-06'),
+(3,120.00,'2026-09-10'),(4,35.00,'2026-09-13'),(5,200.00,'2026-09-16'),
+(6,55.00,'2026-09-19'),(3,90.00,'2026-09-25'),(5,150.00,'2026-09-27'),(6,75.00,'2026-09-28');
+INSERT INTO ad_spend VALUES
+('2026-09-01','instagram',100.00),('2026-09-08','instagram',80.00),('2026-09-15','instagram',60.00),
+('2026-09-01','tiktok',50.00),('2026-09-08','tiktok',40.00),('2026-09-15','tiktok',25.00),('2026-09-22','tiktok',0.00);`,
+  lessons:[
+   {id:'3.1', title:'LEFT JOIN — revenue per channel', worked:true,
+    vocab:[['Primary / foreign key','customers.customer_id identifies a person; orders.customer_id points back at them. Joins are only trustworthy when you know the keys.'],['Fan-out','one customer, many orders: a naive join multiplies rows and silently inflates counts. COUNT(DISTINCT) is the shield.']],
+    problem:'Per signup channel: distinct customers and total revenue — including customers who never ordered.',
+    starter:`SELECT c.channel,
+       COUNT(DISTINCT c.customer_id) AS customers,
+       ROUND(COALESCE(SUM(o.amount),0),2) AS revenue
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.customer_id
+GROUP BY c.channel;`,
+    sayit:'“Row count jumped after that join — fan-out. I de-duplicate to the customer grain before I aggregate.”',
+    expect:[['instagram',3,315],['organic',2,350],['tiktok',3,245]]},
+   {id:'3.2', title:'CAC vs LTV — did the ads profit?',
+    vocab:[['CAC — customer acquisition cost','spend ÷ new customers.'],['LTV — lifetime value','revenue expected per customer. LTV-to-CAC decides if growth is healthy.'],['ROAS — return on ad spend','revenue ÷ spend. ROAS is not profit: it ignores margin and per-customer value.']],
+    problem:'Per paid channel: CAC and revenue-per-customer. Instagram CAC $80 / LTV $105; TikTok CAC $38.33 / LTV $81.67. Cheaper customers, worth less — ratio 2.1 vs 1.3.',
+    starter:`WITH rev AS (
+  SELECT c.channel AS ch, COUNT(DISTINCT c.customer_id) AS cust, COALESCE(SUM(o.amount),0) AS revenue
+  FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id GROUP BY c.channel),
+sp AS (SELECT channel AS ch, SUM(spend) AS spend FROM ad_spend GROUP BY channel)
+SELECT r.ch, r.cust, ROUND(s.spend/r.cust,2) AS cac, ROUND(r.revenue/r.cust,2) AS ltv
+FROM rev r JOIN sp s ON s.ch = r.ch;`,
+    sayit:'“ROAS looks strong, but I’d sanity-check LTV-to-CAC before scaling — revenue per dollar isn’t profit per customer.”',
+    expect:[['instagram',3,80,105],['tiktok',3,38.33,81.67]]},
+   {id:'3.3', title:'Who never ordered?',
+    vocab:[['“No-match” pattern','LEFT JOIN + WHERE right-side IS NULL = rows with no partner. Theo and Nia.']],
+    problem:'Names of customers who signed up but never ordered.',
+    starter:`SELECT c.name
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.customer_id
+WHERE o.order_id IS NULL;`,
+    sayit:'“Accounts with no orders is a LEFT JOIN plus an IS NULL — the two most useful words in practical SQL.”',
+    expect:[['Nia'],['Theo']]},
+   {id:'3.5', title:'Subquery — who beats the average customer?',
+    vocab:[['Subquery','a query inside a query. The inner one computes a value (here, the average); the outer one uses it as a threshold.'],['Benchmark','a computed reference point. “Above average” only means something because the average was computed from the same data.']],
+    problem:'Names and lifetime spend of customers whose total spend beats the average customer’s total ($151.67).',
+    starter:`WITH t AS (
+  SELECT customer_id, SUM(amount) AS total FROM orders GROUP BY customer_id
+)
+SELECT c.name, t.total
+FROM t
+JOIN customers c ON c.customer_id = t.customer_id
+WHERE t.total > (SELECT AVG(total) FROM t)
+ORDER BY t.total DESC;`,
+    sayit:'“Two of six customers beat the $151.67 average — Alex at $350 is carrying a fifth of the store’s revenue, and that’s concentration I’d name.”',
+    expect:[['Alex',350],['Sam',210]]},
+   {id:'3.4', title:'UNION ALL — one money timeline',
+    vocab:[['UNION vs UNION ALL','stack two result sets. UNION de-duplicates (slower); UNION ALL keeps everything. Columns must align.']],
+    problem:'One chronological list: every order (in) and every ad spend (out, skip $0).',
+    starter:`SELECT ordered_at AS d, 'in' AS dir, amount FROM orders
+UNION ALL
+SELECT spend_date, 'out', spend FROM ad_spend WHERE spend > 0
+ORDER BY d;`,
+    sayit:'“Same shape, stacked. UNION ALL, because a duplicate dollar is still a dollar.”',
+    expect:null}
+  ]},
+{ id:'roommate', name:'🏠 Roommate House', tag:'NULL · COALESCE · self-joins',
+  story:'Who actually owes who for rent and utilities? SQL settles it — carefully.',
+  schema:`CREATE TABLE roommates (roommate_id INTEGER PRIMARY KEY, name TEXT, moved_in TEXT);
+CREATE TABLE expenses (expense_id INTEGER PRIMARY KEY, paid_by INTEGER, item TEXT, amount REAL, expense_date TEXT);
+CREATE TABLE payments (payment_id INTEGER PRIMARY KEY, from_roommate INTEGER, to_roommate INTEGER, amount REAL, paid_at TEXT);`,
+  seed:`INSERT INTO roommates VALUES (1,'Maya','2026-08-01'),(2,'Jordan','2026-08-01'),(3,'Sam','2026-09-01');
+INSERT INTO expenses (paid_by, item, amount, expense_date) VALUES
+(1,'rent',1800.00,'2026-09-01'),(2,'utilities',142.50,'2026-09-05'),(3,'groceries',86.20,'2026-09-07'),
+(1,'internet',60.00,'2026-09-10'),(2,'cleaning',NULL,'2026-09-12'),(3,'groceries',94.75,'2026-09-15'),
+(1,'rent',1800.00,'2026-10-01'),(2,'utilities',131.40,'2026-10-04'),(3,'household',NULL,'2026-10-06'),
+(2,'groceries',78.90,'2026-10-08');
+INSERT INTO payments VALUES
+(1,2,1,600.00,'2026-09-03'),(2,3,1,600.00,'2026-09-03'),(3,3,2,47.50,'2026-09-16'),
+(4,2,1,600.00,'2026-10-03'),(5,3,1,600.00,'2026-10-03');`,
+  lessons:[
+   {id:'4.1', title:'The NULL trap, live', worked:true, freeRun:true,
+    vocab:[['NULL','a missing/unknown value — not zero, not empty. NULL propagates: math with NULL returns NULL.'],['COALESCE','returns the first non-NULL value: COALESCE(amount, 0). Makes the assumption visible instead of silent.']],
+    problem:'Run all three. SUM and AVG quietly skip the 2 lost receipts; AVG(COALESCE(amount,0)) counts all 10 expenses. Which average would you defend to a roommate?',
+    starter:`SELECT SUM(amount) AS sum_skips_nulls,
+       ROUND(AVG(amount),2) AS avg_over_8,
+       ROUND(AVG(COALESCE(amount,0)),2) AS avg_over_10,
+       COUNT(*) AS all_rows
+FROM expenses;`,
+    sayit:'“Before I say someone underpaid, I check the NULL rate — a missing receipt isn’t a zero.”',
+    expect:null},
+   {id:'4.2', title:'Monthly totals per roommate',
+    vocab:[['Month cut','strftime(\'%Y-%m\', date) is SQLite’s DATE_TRUNC(\'month\', …). Same idea, different dialect — say which you’re in.']],
+    problem:'Total paid per roommate per month, COALESCE in place.',
+    starter:`SELECT r.name, strftime('%Y-%m', e.expense_date) AS month,
+       ROUND(SUM(COALESCE(e.amount,0)),2) AS total_paid
+FROM roommates r
+LEFT JOIN expenses e ON e.paid_by = r.roommate_id
+GROUP BY r.name, month
+ORDER BY month, total_paid DESC;`,
+    sayit:'“I’m cutting at the roommate-month grain — anything coarser hides who carried September.”',
+    expect:null},
+   {id:'4.3', title:'Self-join — names on both sides',
+    vocab:[['Self-join','join a table to itself (or join the same lookup twice) to compare rows within it. Alias it twice.']],
+    problem:'Every payment with sender NAME and receiver NAME.',
+    starter:`SELECT a.name AS from_name, b.name AS to_name, p.amount, p.paid_at
+FROM payments p
+JOIN roommates a ON a.roommate_id = p.from_roommate
+JOIN roommates b ON b.roommate_id = p.to_roommate;`,
+    sayit:'“Payments point at people twice, so roommates joins twice. IDs are for machines; names settle arguments.”',
+    expect:null},
+   {id:'4.4', title:'Whose receipts are missing?',
+    vocab:[['IS NULL','the only honest NULL test. amount = NULL is never true — NULL isn’t a value, it’s an absence.']],
+    problem:'List the expenses with a lost receipt (amount IS NULL), with the roommate’s name and item. Two rows.',
+    starter:`SELECT r.name, e.item
+FROM expenses e
+JOIN roommates r ON r.roommate_id = e.paid_by
+WHERE e.amount IS NULL;`,
+    sayit:'“Jordan’s cleaning, Sam’s household run — nobody owes anything on a NULL. Yet.”',
+    expect:[['Jordan','cleaning'],['Sam','household']]},
+   {id:'4.5', title:'Net position — what each roommate has actually borne',
+    vocab:[['Net position','everything a person put in minus everything they got back. The settle-up number.'],['Composing CTEs','several named steps (paid, sent, received) combined in one final calculation — complex logic, readable order.']],
+    problem:'Per roommate: expenses fronted (missing = 0) + payments sent − payments received. That net is what each has truly borne. Fair share of $4,193.75 is ~$1,397.92 each.',
+    starter:`WITH paid AS (
+  SELECT paid_by AS id, SUM(COALESCE(amount,0)) AS exp_paid FROM expenses GROUP BY paid_by),
+sent AS (SELECT from_roommate AS id, SUM(amount) AS amt FROM payments GROUP BY from_roommate),
+recv AS (SELECT to_roommate AS id, SUM(amount) AS amt FROM payments GROUP BY to_roommate)
+SELECT r.name,
+       ROUND(COALESCE(p.exp_paid,0) + COALESCE(s.amt,0) - COALESCE(rc.amt,0), 2) AS net_borne
+FROM roommates r
+LEFT JOIN paid p ON p.id = r.roommate_id
+LEFT JOIN sent s ON s.id = r.roommate_id
+LEFT JOIN recv rc ON rc.id = r.roommate_id
+ORDER BY net_borne DESC;`,
+    sayit:'“Net of everything, Jordan has borne the most at $1,505.30 and Maya the least at $1,260 — fronting rent isn’t the same as bearing cost once the payments land.”',
+    expect:[['Jordan',1505.3],['Sam',1428.45],['Maya',1260]]}
+  ]},
+{ id:'jobhunt', name:'🎯 Job Hunt Tracker', tag:'CTEs · funnel · execution order',
+  story:'20 applications, 1 offer. Where does the funnel actually break?',
+  schema:`CREATE TABLE applications (application_id INTEGER PRIMARY KEY, company TEXT, role TEXT, segment TEXT, applied_date TEXT, stage TEXT);
+CREATE TABLE events (event_id INTEGER PRIMARY KEY, application_id INTEGER, event_type TEXT, event_date TEXT);`,
+  seed:`INSERT INTO applications (company, role, segment, applied_date, stage) VALUES
+('Northwind','CSM','startup','2026-09-02','interview'),('Helios','Growth Lead','startup','2026-09-03','screen'),
+('Vantek','CSM','bigtech','2026-09-04','rejected'),('Bluepeak','Ops Lead','agency','2026-09-05','screen'),
+('Marlow','CSM','startup','2026-09-08','offer'),('Corelink','Strategy','bigtech','2026-09-09','interview'),
+('Ferrostat','CSM','agency','2026-09-10','rejected'),('Alto','Growth Lead','startup','2026-09-11','screen'),
+('Nimbus','Ops Lead','bigtech','2026-09-12','rejected'),('Kiteway','CSM','startup','2026-09-15','interview'),
+('Solace','Strategy','agency','2026-09-16','screen'),('Redpine','CSM','bigtech','2026-09-17','rejected'),
+('Umbra','Growth Lead','startup','2026-09-18','applied'),('Loomly','Ops Lead','agency','2026-09-19','applied'),
+('Castor','CSM','bigtech','2026-09-22','screen'),('Verdant','Strategy','startup','2026-09-23','interview'),
+('Halcyon','CSM','agency','2026-09-24','rejected'),('Ostro','Growth Lead','bigtech','2026-09-25','applied'),
+('Mirelo','Ops Lead','startup','2026-09-26','screen'),('Tandem','CSM','agency','2026-09-29','applied');
+INSERT INTO events (application_id, event_type, event_date) VALUES
+(1,'applied','2026-09-02'),(1,'screen','2026-09-09'),(1,'interview','2026-09-18'),
+(5,'applied','2026-09-08'),(5,'screen','2026-09-12'),(5,'interview','2026-09-22'),(5,'offer','2026-09-30'),
+(6,'applied','2026-09-09'),(6,'screen','2026-09-16'),(6,'interview','2026-09-25'),
+(10,'applied','2026-09-15'),(10,'screen','2026-09-21'),(10,'interview','2026-09-29'),
+(16,'applied','2026-09-23'),(16,'screen','2026-09-28');`,
+  lessons:[
+   {id:'5.1', title:'CTE funnel — where it breaks', worked:true,
+    vocab:[['CTE — common table expression','a named temporary result (WITH …). Same power as a subquery, readable top-to-bottom.'],['Funnel','staged path: applied → screen → interview → offer. A drop is meaningless until you name the stage.']],
+    problem:'Count per stage, each as a % of all 20 applications.',
+    starter:`WITH funnel AS (
+  SELECT stage, COUNT(*) AS n FROM applications GROUP BY stage
+)
+SELECT stage, n, ROUND(100.0*n/20,1) AS pct
+FROM funnel
+ORDER BY n DESC;`,
+    sayit:'“The break is at the screen stage, not applications — volume is healthy; fit is the fix, not more applications.”',
+    expect:[['screen',6,30],['rejected',5,25],['applied',4,20],['interview',4,20],['offer',1,5]]},
+   {id:'5.2', title:'Segmentation — interview rate by segment',
+    vocab:[['Mix shift','the overall number moved because the composition changed, not behavior. Segment before you conclude.'],['Conditional aggregation','SUM(CASE WHEN … THEN 1 ELSE 0 END) counts inside a group — pivoting’s engine.']],
+    problem:'Per segment: applications, how many reached interview-or-better, and that rate %. Startups: 4 of 8 = 50%. Bigtech: 1 of 6.',
+    starter:`SELECT segment,
+       COUNT(*) AS applied,
+       SUM(CASE WHEN stage IN ('interview','offer') THEN 1 ELSE 0 END) AS reached_interview,
+       ROUND(100.0*SUM(CASE WHEN stage IN ('interview','offer') THEN 1 ELSE 0 END)/COUNT(*),1) AS rate_pct
+FROM applications
+GROUP BY segment
+ORDER BY rate_pct DESC;`,
+    sayit:'“Same effort, different funnel — that’s mix shift. I segment before I blame the resume.”',
+    expect:[['startup',8,4,50],['agency',6,0,0],['bigtech',6,1,16.7]]},
+   {id:'5.3', title:'Execution order — break it on purpose',
+    vocab:[['Execution order','FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY. That’s why a SELECT alias can’t be filtered in WHERE: it doesn’t exist yet.']],
+    problem:'Run the broken query below (“no such column: n”). Then fix it: wrap it in a CTE and filter outside. Both runs teach one lesson.',
+    starter:`-- 1) Run this. Read the error. It is the lesson.
+-- SELECT stage, COUNT(*) AS n FROM applications WHERE n > 2 GROUP BY stage;
+-- 2) Now write the CTE version that works.`,
+    sayit:'“Execution order is why that alias can’t be filtered there — I’d restructure it as a CTE.”',
+    expect:null, freeRun:true},
+   {id:'5.4', title:'Days from application to screen',
+    vocab:[['Date math','julianday(a) − julianday(b) = days between. Dialects differ (DATEDIFF, DATE_DIFF) — name yours.']],
+    problem:'For each company that got a screen: days from applied to screen, fastest first.',
+    starter:`SELECT a.company,
+       CAST(julianday(s.event_date) - julianday(p.event_date) AS INT) AS days_to_screen
+FROM events p
+JOIN events s ON s.application_id = p.application_id AND s.event_type = 'screen'
+JOIN applications a ON a.application_id = p.application_id
+WHERE p.event_type = 'applied'
+ORDER BY days_to_screen;`,
+    sayit:'“Four days to a screen at Marlow, seven at Northwind — speed is data about fit, not luck.”',
+    expect:null},
+   {id:'5.5', title:'The follow-up list — who’s gone quiet?',
+    vocab:[['Aging','how long something has sat in its current stage. Stale items age; fresh items wait.'],['As-of date','durations need a “today.” Using the data’s latest date keeps the query honest and reproducible.']],
+    problem:'Applications still sitting at “applied” (as of Sep 30, 2026): company, applied date, days waiting — longest first. These are your follow-ups.',
+    starter:`SELECT company, applied_date,
+       CAST(julianday('2026-09-30') - julianday(applied_date) AS INT) AS days_waiting
+FROM applications
+WHERE stage = 'applied'
+ORDER BY days_waiting DESC;`,
+    sayit:'“Four applications are aging at the applied stage — Umbra at twelve days gets the follow-up before Ostro at five; I work the list by age, not by hope.”',
+    expect:[['Umbra','2026-09-18',12],['Loomly','2026-09-19',11],['Ostro','2026-09-25',5],['Tandem','2026-09-29',1]]}
+  ]}
+];
+
+// Episode 1 told as one story — STAR+L: Situation, Task, Action, Result, Learning.
+// (This is the slide deck's content, rewritten as readable paragraphs.)
+const EP1_STORY = {
+  situation:'A small coffee shop has been open six weeks. The owner, Maya, keeps hearing the same sentence from her staff: “Espresso is our most popular drink — it’s always on the ticket.” Popular sounds like profitable, so the espresso has been getting the best menu spot, the chalkboard, and the morning push. Nobody has ever checked whether popular and profitable are the same thing here, because the only record of the business is a single table of fifteen orders: who ordered, what drink, what size, what price, when.',
+  task:'Maya’s actual question is a decision, not a query: “Which drink should I build next month’s menu around?” Translating that into work means one determined task — rank the drinks by the money each one actually brought in. That requires grouping fifteen individual orders into one row per drink, counting how many orders sit in each group, and summing the price inside each group. Popularity (a count) and money (a sum) have to be computed separately, or the decision gets made on the wrong number.',
+  action:'The tool is GROUP BY. One row in the orders table is one order — that level of detail is the grain, and naming it first is what keeps everything after it honest. Group by the dimension (drink, the label), aggregate the measure (price, the money): COUNT(*) for orders, SUM(price) for revenue, sorted biggest first. Three words carry the whole lesson: grain (what one row is), dimension vs measure (label vs number), and aggregate function (many rows in, one number out).',
+  result:'The query returns four rows, and the staff’s story collapses. Latte leads with 5 orders and $28.50 — the shop’s real earner. Espresso does sell like matcha, 3 orders each, but it earns barely half the money: $10.50 against $19.00. Count alone would have called espresso and matcha equals; revenue tells the truth. The drink that was getting the chalkboard was the weakest earner on the menu.',
+  learning:'What the SQL taught: GROUP BY collapses rows into one row per category so an aggregate can be computed inside each category, and every non-aggregated column you select has to be part of that grouping. What the business language taught: a finding is only sayable when it names its grain and its dimension — “I’d cut revenue by drink at the order grain before I touch the menu” is a sentence a decision-maker can act on, because it says what was counted, what was summed, and what happens next.'
+};
+
+// Per-lesson STAR+L framing. situation: the scene; ask: someone asking for a solution;
+// task: what actually has to be done because of the ask; result: what the correct
+// answer shows; learnSql: what we learned about SQL itself. The business-language
+// half of the learning lives in each lesson's vocab + "say it" line (recap, below).
+const META = {
+'1.1':{asker:'Maya, the owner', ask:'“Which drink should I build next month’s menu around? Everyone says espresso is the popular one.”', task:['State the grain first: one row = one order.','Group the 15 orders into one row per drink (the dimension).','Inside each group: COUNT(*) the orders, SUM the price (the measure).','Sort by revenue, biggest first — the ranking is the decision.'], result:'Latte carries the shop: 5 orders, $28.50. Espresso ties matcha on orders (3 each) and earns barely half ($10.50 vs $19.00).', learnSql:'GROUP BY collapses many rows into one row per category; aggregate functions (SUM, COUNT, AVG) then compute one number inside each group.', tip:'SUM(price) and ROUND(SUM(price), 2) both pass here — in this data they return identical values. The difference is background knowledge worth carrying: computers store most decimals approximately, so sums over prices like $5.99 can surface as 28.499999999999996. ROUND(…, 2) snaps the display to cents without changing anything stored. Here every price ends in .50 or .00 (exactly representable), so the rounding is invisible — on real money data, it’s the habit that saves you.'},
+'1.2':{asker:'Maya, the owner', ask:'“That full list is nice, but I only promote drinks that already sell. Show me just the proven ones — four orders or more.”', task:['Start from the 1.1 grouped result — the filter applies to groups, not rows.','The condition (orders ≥ 4) is about an aggregate, so it cannot go in WHERE.','Filter the finished groups with HAVING COUNT(*) >= 4.'], result:'Two drinks survive: latte (5 orders) and cold brew (4). Matcha and espresso drop off the promotion list.', learnSql:'WHERE filters rows before grouping; HAVING filters groups after aggregation. A condition on an aggregate can only live in HAVING.'},
+'1.3':{asker:'Jordan, the shift lead', ask:'“Five lattes on the report — but is that five customers, or Maya’s regulars ordering twice? I need real people, not receipts.”', task:['“Real people” means unique customer names per drink.','COUNT(*) counts rows (receipts), so it overstates people.','COUNT(DISTINCT customer_name) counts each person once per drink.'], result:'Latte is 4 people, not 5 — Maya ordered twice. Cold brew and espresso reach 3 people each; matcha only 2.', learnSql:'COUNT(DISTINCT column) counts unique entities. Choosing between COUNT(*) and COUNT(DISTINCT) is choosing what question you are answering.'},
+'1.4':{asker:'Maya, the owner', ask:'“Before I reprice anything, break each drink down by size. Maybe the large is doing all the work.”', task:['The slice is now two dimensions at once: drink AND size.','Group by both columns — one row per combination.','Count and sum inside each combination, then read drink by drink.'], result:'Latte’s money is a medium story ($22.00 of its $28.50); cold brew is a large story ($15.00 of $19.50). Same drink, different business.', learnSql:'GROUP BY accepts multiple columns: the output grain becomes one row per combination of the grouped dimensions.'},
+'2.1':{asker:'You, the creator', ask:'“Views are up every week, so the channel is healthy… right? Something feels off.”', task:['Views alone hide pull — compute CTR (clicks ÷ views) for every post.','Keep every post as its own row; add a running total of views per platform over time.','That “add a column without collapsing rows” job is a window function, not GROUP BY.'], result:'TikTok’s CTR slides 2.5% → 1.3% while its views climb. The biggest platform has the weakest pull — the feeling was data.', learnSql:'A window function computes across related rows (PARTITION BY platform, ORDER BY date) and attaches the result to each row instead of collapsing rows into groups.'},
+'2.2':{asker:'You, the creator', ask:'“Don’t just show me totals — how much did each new post actually add over the last one?”', task:['The comparison is row-to-previous-row, inside each platform, in date order.','LAG(views) pulls the previous post’s views into the current row.','Subtract: current minus previous = the week-over-week change.'], result:'Every platform is growing, but the increments tell the story — TikTok adds thousands per post; YouTube adds hundreds. Growth has a shape, not just a direction.', learnSql:'LAG (and its twin LEAD) reaches into the previous or next row inside a window — period-over-period math without joining a table to itself.'},
+'2.3':{asker:'A sponsor', ask:'“Before I pay for placement: what’s your #1 post on each platform? Not overall — per platform.”', task:['“Per platform” means rank inside groups, not across the whole table.','RANK() OVER (PARTITION BY platform ORDER BY views DESC) restarts the ranking per platform.','Every platform gets its own #1.'], result:'“Window functions, simply” is the #1 post on all three platforms — one title, three leaderboards. That’s the sponsor’s answer.', learnSql:'PARTITION BY inside OVER() restarts a window calculation per group; RANK leaves gaps after ties (1, 2, 2, 4), ROW_NUMBER never ties.'},
+'2.4':{asker:'You, allocating next month’s effort', ask:'“I can only push one platform. Forget total views — whose audience actually clicks?”', task:['The decision metric is CTR per platform, aggregated over all posts.','SUM(clicks) ÷ SUM(views) per platform — ratio of sums, not average of ratios.','Rank platforms by that CTR.'], result:'YouTube 6.1%, Instagram 4.3%, TikTok 1.7%. The platform with the most views converts worst. Effort goes to YouTube.', learnSql:'Aggregating a ratio means summing the numerator and denominator separately, then dividing — averaging pre-computed percentages quietly weights every post equally.'},
+'3.1':{asker:'You, store owner', ask:'“Break down revenue by where customers came from. And don’t lose anyone — I want to see the channels that brought people who never bought, too.”', task:['Customers and orders live in different tables — join them on customer_id.','“Don’t lose anyone” rules out INNER JOIN; LEFT JOIN keeps zero-order customers.','One customer has many orders, so count people with COUNT(DISTINCT …) or the join inflates them (fan-out).'], result:'Instagram: 3 customers, $315. Organic: 2 customers, $350 — the best revenue with zero ad spend. TikTok: 3 customers, $245.', learnSql:'A JOIN combines tables on keys; LEFT JOIN keeps unmatched left rows with NULLs on the right. Joining one-to-many multiplies rows — fan-out — and DISTINCT is the shield.'},
+'3.2':{asker:'You, deciding next month’s ad budget', ask:'“I spent $355 and made $910, ROAS is 2.56 — should I just double the ads?”', task:['ROAS can’t answer that; per channel, compute CAC (spend ÷ customers acquired) and value per customer (revenue ÷ customers).','“Acquired” means everyone who signed up via the channel — LEFT JOIN again, or non-buyers vanish from the denominator.','Compare the LTV-to-CAC ratio per channel, not the blended ROAS.'], result:'Instagram CAC $80 / value $105 (ratio 1.3). TikTok CAC $38.33 / value $81.67 (ratio 2.1) — cheaper customers who are worth less, and still the better efficiency. Doubling blindly would double the worse ratio.', learnSql:'A CTE (WITH …) names an intermediate result so a multi-step calculation reads top-to-bottom; denominators are a modeling choice — the same data gives CAC $57.50 or $38.33 depending on who counts as a customer.'},
+'3.3':{asker:'You, writing a win-back email', ask:'“Who signed up and never bought anything? Those are the people I need to email.”', task:['Start from all customers; attach orders where they exist.','The people wanted are exactly the ones with no matching order.','LEFT JOIN, then keep only rows where the order side IS NULL.'], result:'Theo and Nia. Two names — that’s the whole email list.', learnSql:'LEFT JOIN + WHERE right-side IS NULL is the standard “rows with no match” pattern; IS NULL is the only honest test for a missing value.'},
+'3.4':{asker:'Your bookkeeper', ask:'“One timeline, please: every dollar in and every dollar out, in date order. I don’t care that they live in different tables.”', task:['Orders (in) and ad spend (out) have the same shape: date, direction, amount.','Stack them vertically with UNION ALL — duplicates are real dollars, so no de-duplication.','Skip the $0 spend row; sort the stack by date.'], result:'One chronological money story: spend early in September, revenue answering after. Cause and effect, in order.', learnSql:'UNION stacks result sets with matching columns (and de-duplicates); UNION ALL stacks without de-duplicating — faster, and correct when duplicates are real.'},
+'4.1':{asker:'Sam, your roommate', ask:'“Your spreadsheet says I paid less on average. But two receipts got lost — are you counting those as zero, or pretending they never happened?”', task:['Run the honest experiment: SUM, AVG, and AVG with COALESCE side by side on the same column.','SUM and AVG silently skip NULL rows; COUNT(*) shows how many rows really exist.','COALESCE(amount, 0) makes the “treat missing as zero” choice visible instead of silent.'], result:'SUM says $4,193.75; AVG says $524.22 — computed over only 8 of 10 expenses. With COALESCE the average is $419.38 over all 10. Three defensible-looking answers; only the third names its assumption.', learnSql:'NULL is a missing value, not zero: it propagates through math and is skipped by aggregates. COALESCE returns the first non-NULL value, making the assumption explicit in the query.'},
+'4.2':{asker:'Maya, your roommate', ask:'“Settle it monthly: who actually carried the house each month?”', task:['Group expenses by roommate and by month — SQLite’s month cut is strftime(’%Y-%m’, date).','LEFT JOIN so a roommate with no expenses in a month still appears.','COALESCE each amount so a lost receipt doesn’t silently shrink a total.'], result:'Maya carries September and October on rent ($1,800 each month); Jordan and Sam cover the smaller, steadier bills. The argument ends.', learnSql:'Date truncation (DATE_TRUNC in Postgres, strftime here) turns timestamps into buckets; grouping by a bucket plus a dimension gives one row per combination.'},
+'4.3':{asker:'Jordan, your roommate', ask:'“The payments table is just numbers and IDs. Who paid whom? Give me names.”', task:['Payments reference roommates twice: once as sender, once as receiver.','Join the roommates table twice with two aliases — once per role.','Now both sides of every payment can show a name.'], result:'Five payments, fully named: Jordan → Maya $600, Sam → Maya $600, Sam → Jordan $47.50, and the October rent round. IDs settle nothing; names do.', learnSql:'A self-join joins a table to itself (or joins the same lookup twice) to compare or label rows within it; aliases are what make the two copies distinguishable.'},
+'4.4':{asker:'You, before accusing anyone', ask:'“Which expenses have no receipt — and whose are they? Nobody’s paying for a number we can’t prove.”', task:['A lost receipt is amount IS NULL — test for the absence itself.','Join to roommates to attach a name to each missing receipt.','Everyone else is off the hook.'], result:'Exactly two: Jordan’s cleaning and Sam’s household run. Two missing receipts — and zero accusations owed.', learnSql:'amount = NULL is never true, because NULL isn’t a value; the test is IS NULL. Filtering on absence is a query in its own right.'},
+'5.1':{asker:'You, Sunday night', ask:'“Twenty applications, one offer, and I’m exhausted. Am I applying badly, or is the funnel breaking somewhere specific?”', task:['Count applications per stage — that staging is the funnel.','Express each stage as a share of all 20 to see where mass is lost.','Name the intermediate result with a CTE so the reasoning reads in order.'], result:'Screen 6, rejected 5, stuck-at-applied 4, interview 4, offer 1. The mass dies at screening, not at applying — volume was never the problem.', learnSql:'A CTE (WITH name AS (…)) names a temporary result so a query reads top-to-bottom like the reasoning that produced it; a funnel is just GROUP BY on a stage column plus shares.'},
+'5.2':{asker:'You, planning next month’s applications', ask:'“Same effort everywhere, wildly different results. Is it me, or are some segments just colder?”', task:['Cut the funnel by segment: startup, bigtech, agency.','Per segment: applications, how many reached interview-or-better (conditional SUM over a CASE), and the rate.','Compare rates, not raw counts.'], result:'Startups convert at 50% (4 of 8); bigtech and agency sit at 16.7% and 0%. It’s not effort — it’s mix. Next month’s applications follow the warm segment.', learnSql:'Conditional aggregation — SUM(CASE WHEN … THEN 1 ELSE 0 END) — counts a subset inside each group; segmenting before concluding is how you avoid blaming behavior for a mix shift.'},
+'5.3':{asker:'An interviewer', ask:'“Your query filters on the alias n in WHERE and it errored. Why? Most candidates can’t tell me.”', task:['Run the broken query and read the error literally.','Recall the order SQL actually executes: FROM → WHERE → GROUP BY → HAVING → SELECT.','The alias is born in SELECT — after WHERE has already run. Restructure with a CTE and filter outside.'], result:'“No such column: n” — because at WHERE time, n doesn’t exist yet. The CTE version runs and returns the stages with more than 2 applications.', learnSql:'Execution order is why SELECT aliases can’t be filtered in WHERE (or grouped on in some dialects). Knowing the order turns error messages into explanations.'},
+'5.4':{asker:'You, reading response times', ask:'“The companies that screened me — how fast did they move? Speed probably tells me something about fit.”', task:['The events table holds two milestones per application: applied and screen.','Join the table to itself: applied-row paired with screen-row per application.','Subtract dates (julianday difference) and rank fastest first.'], result:'Marlow moved in 4 days, Verdant 5, Kiteway 6, Northwind and Corelink 7. The offer came from the fastest mover — speed was signal, not luck.', learnSql:'Self-joining an events table pairs milestones for the same entity; date subtraction (julianday here, DATEDIFF elsewhere) turns two timestamps into a duration.'},
+'0.1':{asker:'You, opening the data for the first time', ask:'“Don’t analyze anything yet. Just show me what an order looks like — drink, size, price.”', task:['Name the three columns instead of using *.','No filter, no math — every row comes back.','Read the rows and say the grain out loud.'], result:'Fifteen orders, three facts each. You can already see it: lattes repeat, espresso is cheap, matcha runs large.', learnSql:'SELECT reads columns from a table; naming columns (instead of *) declares exactly what you need and makes the output self-documenting.'},
+'0.2':{asker:'Jordan, the shift lead', ask:'“Just the lattes. Who’s buying them and what are they paying?”', task:['Start from all orders; keep only rows where drink is latte.','Text values need single quotes.','Project customer, drink, price.'], result:'Five latte orders from four people — Maya twice. The regular Jordan suspected exists, and she’s already visible in the raw filter.', learnSql:'WHERE tests every row against a condition and keeps the rows that pass; it runs before grouping, sorting, or math.'},
+'0.3':{asker:'Maya, the owner', ask:'“What are the three priciest orders we’ve sold? I want to know what the top of the menu looks like.”', task:['Sort by price, highest first: ORDER BY price DESC.','Then cap the result: LIMIT 3.','Order matters — limit without sort returns arbitrary rows.'], result:'A $7.00 large matcha, a $6.50 large latte, then a $6.00 medium matcha. The top of the menu is a large-drink story.', learnSql:'ORDER BY sorts the finished result (DESC = descending); LIMIT truncates it. Together they answer every “top N” question.'},
+'1.5':{asker:'Maya, the owner', ask:'“Forget drinks — how is the shop doing day to day? Are we growing?”', task:['Change the grain: one row per day instead of per drink.','Group by ordered_at; count and sum inside each day.','Sort by date so the trend reads left to right.'], result:'Revenue swings $8.50–$17.50 with no climb: Oct 3 spikes, Oct 6 dips back. Six days of weather, not a trend — and saying so is the analysis.', learnSql:'Grouping by a date column turns a table into a time series; the same GROUP BY machinery, pointed at time instead of category.'},
+'2.5':{asker:'You, planning the next series', ask:'“One of my YouTube videos is doing the heavy lifting, isn’t it? What share of the channel is each post carrying?”', task:['Keep YouTube posts as rows; compute the YouTube total alongside them.','Each post’s share = its views ÷ the platform total × 100.','The total-beside-every-row shape is a window SUM, not a GROUP BY.'], result:'The newest post carries 36.3% of YouTube’s views; the first carries 14.0%. The channel is increasingly one video — opportunity and fragility in one column.', learnSql:'SUM() OVER (PARTITION BY …) attaches a group total to every row, enabling percent-of-total without collapsing detail.'},
+'3.5':{asker:'You, store owner', ask:'“Who are my whales? And don’t just say ‘big spenders’ — bigger than what? Bigger than my average customer.”', task:['First compute each customer’s lifetime total (a grouped subtotal).','Then compute the average of those totals: $151.67 across 6 buyers.','Keep customers above that benchmark — the benchmark itself is a subquery.'], result:'Alex ($350) and Sam ($210) beat the average; nobody else is close. Two customers, $560 of $910 — concentration worth naming before it becomes dependence.', learnSql:'A subquery computes a value the outer query then uses as a threshold; a CTE can hold the subtotal while the subquery holds the benchmark.'},
+'4.5':{asker:'The whole house, settling up', ask:'“Enough. Fronting rent, sending payments, receiving payments — net it all out. What has each of us actually borne?”', task:['Three separate flows: expenses fronted, payments sent, payments received — one CTE each.','Missing receipts count as zero (house rule from 4.1).','Net = expenses + sent − received, per roommate; LEFT JOINs so nobody disappears.'], result:'Jordan has borne the most ($1,505.30), then Sam ($1,428.45), then Maya ($1,260.00) — against a fair share of ~$1,397.92. The rent-fronter is owed, not owing, and now it’s arithmetic instead of vibes.', learnSql:'Complex answers compose: multiple CTEs each compute one flow, and the final select combines them. COALESCE at every seam keeps missing pieces at zero instead of NULL-ing the whole person.'},
+'5.5':{asker:'You, Monday morning', ask:'“Some of these applications have just… sat there. Who’s gone quiet on me? Give me a follow-up list.”', task:['Filter to stage = applied — the ones still waiting for first contact.','Measure age against an as-of date (Sep 30, 2026): days since applied.','Longest wait first: that ordering is the work list.'], result:'Umbra has waited 12 days, Loomly 11, Ostro 5, Tandem 1. Four follow-ups, in the order they’re owed.', learnSql:'Date subtraction against a fixed as-of date turns a status column into an aging report; the as-of choice is stated, so the numbers are reproducible.'}
+};
+
+const DONATE_URL = 'https://ko-fi.com/'; // ← replace with your Ko-fi page (e.g. https://ko-fi.com/yourname) once you create it
+let SQL, db, curDb, curLesson, done = JSON.parse(localStorage.getItem('speakSqlDone')||'{}');
+
+function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); }
+function renderProgress(){
+  const total = DATABASES.reduce((a,d)=>a+d.lessons.length,0);
+  const n = Object.keys(done).filter(k=>done[k]).length;
+  document.getElementById('pfill').style.width = (100*n/total)+'%';
+  document.getElementById('plabel').textContent = n+' / '+total+' lessons complete';
+}
+function loadDb(d){
+  curDb = d;
+  db = new SQL.Database();
+  db.run(d.schema); db.run(d.seed);
+  showLesson(d, d.lessons[0]);
+}
+function renderSidebar(){
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = DATABASES.map(d=>{
+    const lessons = d.lessons.map(l=>`<button class="lessonbtn ${curLesson&&curLesson.id===l.id&&curDb===d?'active':''}" data-db="${d.id}" data-lesson="${l.id}">${done[d.id+':'+l.id]?'<span class="done">✓</span> ':''}${l.id} ${l.title}</button>`).join('');
+    return `<h2>${d.name}</h2>${lessons}`;
+  }).join('') + `<div class="donatebox"><a href="${DONATE_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a><div style="margin-top:6px">Keeps the lessons free.</div></div>`;
+  sb.querySelectorAll('.lessonbtn').forEach(b=>b.onclick=()=>{
+    const d = DATABASES.find(x=>x.id===b.dataset.db);
+    const l = d.lessons.find(x=>x.id===b.dataset.lesson);
+    if(curDb!==d) { curDb=d; db=new SQL.Database(); db.run(d.schema); db.run(d.seed); }
+    showLesson(d,l);
+  });
+}
+function norm(v){ return typeof v==='number' ? Math.round(v*100)/100 : v; }
+function checkResult(res, lesson){
+  if(!lesson.expect || !res || !res.length) return null;
+  const got = res[0].values.map(r=>r.map(norm).join('|')).sort();
+  const exp = lesson.expect.map(r=>r.map(norm).join('|')).sort();
+  return JSON.stringify(got)===JSON.stringify(exp);
+}
+function renderDbViewer(){
+  const el = document.getElementById('dbview');
+  if(!el || !db) return;
+  try{
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+    if(!tables.length){ el.innerHTML = '<p>No tables loaded.</p>'; return; }
+    el.innerHTML = tables[0].values.map(([t])=>{
+      const cnt = db.exec(`SELECT COUNT(*) FROM "${t}"`)[0].values[0][0];
+      const res = db.exec(`SELECT * FROM "${t}" LIMIT 50`);
+      if(!res.length) return `<h4>${t}</h4><div class="rowcount">0 rows</div>`;
+      const {columns, values} = res[0];
+      return `<h4>${t}</h4><div class="rowcount">${cnt} row${cnt===1?'':'s'}${cnt>50?' — showing first 50':''}</div>
+        <div class="tblwrap"><table class="res"><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr>${values.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table></div>`;
+    }).join('');
+  }catch(e){ el.innerHTML = '<p>Could not read the database: '+e.message+'</p>'; }
+}
+const STORIES = {
+'1.2':{situation:'The revenue ranking from last week did its job — Maya now knows latte carries the shop. But a menu has room to feature maybe two drinks, and “the full ranking” isn’t a decision. Her staff keep pitching favorites: matcha is photogenic, espresso is classic, cold brew is trending. Everyone has an opinion, and every opinion points at a different drink.', task:'Maya cuts through it with a rule instead of a debate: “Only show me drinks that have already proven they can sell — four orders or more.” That turns the ask into a filtering job on the grouped result from 1.1. The condition is about a group total (orders per drink), not about any single row, so the work is: group first, count inside the group, then keep only the groups that clear the bar.', action:'HAVING is the clause built for exactly this. WHERE runs before grouping and can only see individual orders — asking WHERE to filter on COUNT(*) is asking it to judge a total that doesn’t exist yet. HAVING runs after GROUP BY, when each drink has become one row with its count attached, and it keeps latte (5 orders) and cold brew (4) while matcha and espresso (3 each) fall away.', result:'The promotion list writes itself: two drinks, both proven. Matcha and espresso aren’t banned — they’re just not featured until they earn a fourth order. Maya’s chalkboard argument is over, and it ended with a threshold instead of a taste contest.', learning:'About the SQL: the difference between WHERE and HAVING is timing — rows before grouping, groups after. About the business language: “proven seller” only means something once you attach a number to it. “Drinks with four or more orders” is a rule a whole staff can apply the same way; “popular” never was.'},
+'1.3':{situation:'Jordan closes the shop most nights, and he’s been watching the latte count climb. Five lattes on the report feels like momentum. But Jordan recognizes faces: Maya (not the owner — a regular with the same name) comes in almost every day. He starts to suspect the “growth” is one loyal customer ordering twice inside the same fifteen orders, not five different people discovering the shop.', task:'His question is precise: “How many real people ordered each drink?” Real people means unique names. The task is to count customers per drink in a way where the same person ordering twice still counts once — because a business built on five strangers is different from a business built on four, and Jordan wants to know which one he’s working in.', action:'COUNT(*) counts rows — receipts. COUNT(DISTINCT customer_name) counts entities — people. Swapping one for the other is a one-word change in the query and a completely different question in the business. Run both against latte and watch 5 become 4.', result:'Latte reaches 4 distinct people, not 5: the regular ordered twice. Cold brew and espresso each reach 3 people; matcha only 2 — the drink that looked mid-tier on revenue is actually the narrowest audience on the menu. If Maya wants new faces, matcha is the sampling candidate, not the proven earner.', learning:'About the SQL: DISTINCT inside COUNT collapses duplicates before counting; without it, every aggregate quietly answers “how many rows” even when you asked “how many people.” About the business language: “customers” and “orders” are different units, and mixing them inflates every growth story. Naming the entity — people, not receipts — is analyst hygiene.'},
+'1.4':{situation:'Repricing week. Maya is staring at the menu board wondering whether the drink ranking is hiding a size ranking inside it. A drink can win on one size and coast on another; a large cold brew and a medium cold brew are almost different products, with different margins and different customers. “Before I touch a single price,” she says, “break every drink down by size. Maybe the large is doing all the work.”', task:'The task is a finer cut of the same table: not one row per drink, but one row per drink-and-size combination. Count and sum inside each combination, then read the story drink by drink: within each drink, which size carries the money?', action:'GROUP BY takes two columns at once — GROUP BY drink, size — and the output grain changes from “one row per drink” to “one row per drink-size pair.” Nothing else in the query has to change; the aggregates do the same work inside smaller buckets. That’s the lesson hiding in the syntax: the GROUP BY list is where you declare what one row of your answer means.', result:'Latte is a medium story: $22.00 of its $28.50 comes from mediums. Cold brew is the opposite — a large story, $15.00 of $19.50. Espresso is small-only by design. So “reprice the drink” was the wrong unit; Maya reprices sizes: protect the medium latte, and test whether a large matcha can borrow cold brew’s trick.', learning:'About the SQL: adding a column to GROUP BY refines the grain of the output; every aggregate is then computed per combination. About the business language: blended averages hide the segment that matters. “The drink underperforms” and “the small underperforms” lead to different decisions — the finer grain is what lets you say the second one.'},
+'2.1':{situation:'You post the same four videos everywhere, and the weekly numbers look like a success story: views climb on every platform, every week. And yet the comments feel thinner, the click-throughs to your channel feel rarer, and a sponsor who asked for “engagement” last month has gone quiet. The total says growth. Your gut says decay. Both can’t be the whole story — so which one is the data actually telling?', task:'The determined work is to stop reading reach and start reading pull. For every post, compute CTR — clicks divided by views — and lay each platform’s cumulative views next to it over time. Crucially, the posts themselves must stay visible as individual rows; collapsing them into platform totals would destroy the trend you’re hunting. That “keep the rows, add a calculation” shape is the signature of a window function.', action:'SUM(views) OVER (PARTITION BY platform ORDER BY posted_at) attaches a running total to each post without merging any posts together, and ROUND(100.0*clicks/views, 1) prices each post’s pull as a percentage. GROUP BY would have given you four numbers and no story; the window gives you every post, annotated, in sequence.', result:'There it is. TikTok’s CTR slides from 2.5% to 1.3% across the four posts while its view count more than doubles — the platform is showing the videos to more people who care less. YouTube’s CTR holds around 6%. The channel wasn’t growing and decaying at once; one platform was doing each, and the blended total hid both.', learning:'About the SQL: a window function computes across a set of related rows (the partition) and returns the value on every row; GROUP BY collapses those rows into one. About the business language: CTR separates distribution from resonance — “views are up” is a statement about the algorithm, “CTR is softening” is a statement about the audience, and they demand different fixes.'},
+'2.2':{situation:'Your channel manager doesn’t want another totals chart. “I can see we ended higher than we started,” she says. “What I need to know is the shape: did each new video actually add anything, or are we riding one old hit? Show me what each post added over the one before it — per platform.” It’s a reasonable question that a totals table structurally cannot answer, because totals erase the steps between them.', task:'The work is row-to-previous-row comparison, inside each platform, in posted order. Each post needs to see the views of the post before it, on the same platform, and subtract. No new table, no export to a spreadsheet — the comparison has to happen inside the query, per partition, ordered by date.', action:'LAG(views) OVER (PARTITION BY platform ORDER BY posted_at) reaches one row back inside each platform’s timeline and places that earlier value beside the current one. views minus LAG(views) is the week-over-week change, computed for every post in a single pass. The first post of each platform gets NULL — there is no previous post, and the query honestly says so.', result:'Every platform’s steps are positive, but the shapes diverge. TikTok adds thousands of views per post; YouTube adds hundreds. One curve is a staircase, the other is a ramp — and the content strategy for “keep feeding the staircase” is different from “widen the ramp.” The manager gets her shape.', learning:'About the SQL: LAG and LEAD are window functions that shift values across rows — period-over-period math without self-joins. About the business language: growth is a sequence, not a total. “Up 4,100 views” closes a conversation; “each post added more than the last” starts the right one.'},
+'2.3':{situation:'A sponsor emails with money on the table: “We’ll place our product in your top video — on each platform. Send us the #1 post per platform, with numbers.” Your biggest video overall is on TikTok by a mile, but that’s not what was asked. The sponsor is buying three leaderboards, not one, and “top” has to be proven inside each platform’s own audience, where a view doesn’t mean the same thing everywhere.', task:'The task is ranking inside groups: for each platform separately, order the posts by views and assign 1, 2, 3, 4. The ranking must restart at every platform boundary. It also has to survive scrutiny — if two posts ever tied, the sponsor would ask which ranking rule broke the tie, so the rule gets named before the query runs.', action:'RANK() OVER (PARTITION BY platform ORDER BY views DESC) builds a separate leaderboard per partition. And the tie rule matters: RANK shares a rank and then skips (1, 2, 2, 4), ROW_NUMBER never shares. Declaring which one you used is the difference between a ranking and an argument.', result:'One title sweeps it: “Window functions, simply” is the #1 post on YouTube, TikTok, and Instagram alike. The sponsor gets three proven winners instead of one big number, and you get a sentence that travels well in a pitch deck — the same piece of content wins in three different audiences.', learning:'About the SQL: partitioning a window restarts its calculation per group, so ranking, running totals, and row-to-row comparisons can all live inside one query. About the business language: “our top post” is meaningless until the leaderboard is defined. Top per platform, with the tie rule stated, is a claim a sponsor can verify — and pay for.'},
+'2.4':{situation:'End of the month, and you have to choose where next month’s effort goes. You can seriously push one platform: more posts, better hooks, real attention. The obvious candidate is TikTok — it has five times YouTube’s views. But the sponsor who went quiet, and the thinning comments, keep nagging at you. Before you commit a month, you want one number per platform that measures audience quality instead of audience size.', task:'The task is an apples-to-apples CTR per platform: total clicks divided by total views across all posts on that platform. Not the average of the four percentages — an average would weight a 1,200-view post the same as a 19,900-view post. Sum the clicks, sum the views, divide once. Then rank the platforms by the result and let the ranking make the decision.', action:'GROUP BY platform with ROUND(100.0*SUM(clicks)/SUM(views), 1) does it in three lines. The 100.0 forces decimal math — in integer division, this ratio would collapse toward zero and the whole comparison would quietly rot. The query is simple; the discipline is in aggregating the ratio correctly.', result:'YouTube 6.1%. Instagram 4.3%. TikTok 1.7%. The platform with the most views converts worst by a factor of three and a half. Next month’s effort goes to YouTube — not because it’s biggest, but because its audience actually clicks. Reach was the vanity metric; pull was the decision metric.', learning:'About the SQL: ratios get aggregated as sums of their parts, never as averages of ratios; and casting to decimal before dividing protects every percentage you compute. About the business language: this is segmentation doing its job — the blended channel hid three different audiences, and the segment, not the blend, is what you allocate against.'},
+'3.1':{situation:'Your little store has been running for a month, and the money is real — but it’s a soup. Customers arrived from Instagram, from TikTok, and from just finding you (organic). You know the total revenue. What you don’t know is which door the money walked through, or whether some door is bringing in window-shoppers who sign up, smile, and never buy a thing.', task:'The owner’s ask has two clauses, and the second one is the trap: “Break revenue down by where customers came from — and don’t lose anyone. I want to see the channels that brought people who never bought, too.” The work: join customers to their orders on customer_id, group by signup channel, count the people distinctly, sum what they spent — while keeping the zero-order customers inside the count.', action:'LEFT JOIN is the clause that honors “don’t lose anyone”: every customer survives the join, and those without orders carry NULLs instead of vanishing. COUNT(DISTINCT customer_id) is the second guardrail — Maya ordered twice, and a naive count after a one-to-many join would clone her (fan-out) and inflate the channel that “acquired” her.', result:'Organic quietly wins: 2 customers, $350 — the best revenue in the store with zero ad spend. Instagram brings 3 customers and $315; TikTok brings 3 and $245. And two people — Theo and Nia — signed up and bought nothing, visible only because the join refused to drop them. They’re not a rounding error; they’re a win-back list.', learning:'About the SQL: joins are only as trustworthy as your knowledge of the keys, and joining one-to-many multiplies rows — check your row count after every join. About the business language: “customers” after a join is a claim about DISTINCT people, and a channel’s value includes the people it brought who haven’t bought yet.'},
+'3.2':{situation:'The blended number looks like a green light: $355 of ad spend, $910 of revenue, ROAS 2.56. “So we double the ads?” is the obvious next sentence, and it’s exactly the sentence that bankrupts small stores. Because ROAS is an average over two very different channels — and somewhere inside that average, one channel might be buying expensive customers who barely spend, while the other buys cheap customers who come back.', task:'The real task is to price a customer, per channel. CAC: what one acquired customer costs (channel spend ÷ customers acquired). Value per customer: what one is worth so far (channel revenue ÷ customers). “Acquired” means everyone who signed up through the channel, buyers or not — shrink that denominator to only buyers and CAC lies politely. Then compare the ratios channel by channel.', action:'A CTE earns its keep here: one named step builds per-channel customers and revenue (LEFT JOIN, so non-buyers stay in the count), another totals the spend, and the final select divides. CAC = spend ÷ acquired. Instagram: $240 ÷ 3 = $80. TikTok: $115 ÷ 3 = $38.33. The denominator is a decision, and the query makes it in writing.', result:'TikTok customers are cheaper and worth less: value $81.67 against Instagram’s $105. But the ratio flips the verdict — TikTok returns 2.1 dollars of value per dollar of acquisition cost; Instagram returns 1.3. Doubling “the ads” would double both ratios blindly. The budget move is to shift weight toward TikTok and fix Instagram’s cost, channel by channel.', learning:'About the SQL: WITH (a CTE) turns a multi-step calculation into named, debuggable steps — and every ratio’s denominator is a modeling choice the SQL makes visible. About the business language: ROAS is revenue per dollar, not profit per customer; LTV-to-CAC is the sentence that decides whether growth is healthy or just loud.'},
+'3.3':{situation:'Eight people have signed up for your store. Six have bought something. Two are just… there — names in the customers table, silent since the day they arrived. They cost nothing to email and they already raised their hands once. Before you spend another dollar acquiring strangers, you want the simplest list in the business: who signed up and never ordered?', task:'The task is a negative: find rows defined by the absence of a match. Start from every customer, attach orders where they exist, and keep exactly the customers for whom no order exists. The answer should be short enough to paste into an email tool — two names, no spreadsheet archaeology.', action:'LEFT JOIN customers to orders, then filter WHERE o.order_id IS NULL. That pairing is the standard “no-match” pattern in SQL: the LEFT JOIN manufactures NULLs precisely where the relationship is missing, and the filter keeps only the manufactured gaps. An INNER JOIN could never answer this question — it deletes the very people you’re looking for before you start counting.', result:'Theo and Nia. Two names. Theo came in organically in late September; Nia arrived through TikTok and never bought. That’s the entire win-back campaign: two emails, written like they’re for two people, because they are.', learning:'About the SQL: absence is data. LEFT JOIN plus IS NULL turns “who has no…” into a first-class query, and IS NULL is the only honest way to test for a missing value. About the business language: a win-back list is a segment defined by what didn’t happen — and naming it precisely (“signed up, never ordered”) is what makes the outreach feel personal instead of automated.'},
+'3.4':{situation:'Your bookkeeper is closing September and she’s allergic to your system, which is two tables and a shrug. “I don’t care that money-in lives in one table and money-out lives in another,” she says. “One timeline. Every dollar, in date order. That’s how I see whether the ads caused the sales or just happened near them.” She’s right, of course: causality has a chronology, and right now yours is split in half.', task:'The task is to stack two differently-shaped histories into one. Orders contribute date, direction “in,” amount. Ad spend contributes date, direction “out,” amount — minus the embarrassing $0 row that isn’t an event at all. The columns must line up exactly, the duplicates must survive (two $600 spends are two events, not a typo), and the result must read in date order.', action:'UNION ALL is the stacking clause: it appends one result set under the other without de-duplicating. Its sibling UNION would sort and dedupe — slower, and wrong here, because a repeated dollar amount is a real second dollar. The direction column is invented on the fly in each SELECT, which is the trick that makes two tables with different meanings share one timeline.', result:'One ledger, September in order: ad money going out in the first half of the month, order money answering through the second half. Theo’s zero-dollar spend row is gone because it never happened. The bookkeeper can finally see the shape of the month — spend precedes revenue, which is the whole argument for the ads, visible at a glance.', learning:'About the SQL: UNION/UNION ALL combine result sets vertically and demand aligned columns; choosing ALL vs not is choosing whether duplicates are noise or data. About the business language: finance reads chronologically. “ROAS 2.56” is a summary; a dated timeline is evidence, and evidence is what survives a bookkeeper.'},
+'4.1':{situation:'The house spreadsheet says Sam paid less “on average,” and Sam has feelings about it. Two expense receipts got lost this month — one for cleaning, one for a household run — and they’re sitting in the table as blanks. Sam’s question is the right one: “Are you counting the lost receipts as zero? Or pretending those expenses never happened? Because those give different answers, and one of them makes me the house deadbeat.”', task:'The task is to make the invisible choice visible. Run three calculations on the same column side by side: the sum, the average as-is, and the average with missing values explicitly replaced by zero. Then count the rows. Whichever answer the house defends, it should be defending it on purpose, with the assumption printed inside the query instead of smuggled inside a spreadsheet default.', action:'Aggregates skip NULLs silently. SUM(amount) adds only the 8 known amounts; AVG(amount) divides by 8 even though 10 expenses happened — a lie of omission with correct arithmetic. COALESCE(amount, 0) forces a decision: every expense counts, missing ones as zero, stated in the SQL where a roommate can argue with it. COUNT(*) sits alongside as the witness: 10 rows went in.', result:'Three answers, all “correct”: $4,193.75 total; a $524.22 average over 8 expenses; a $419.38 average over all 10. Sam wasn’t underpaying — the average was undercounting. The house adopts the COALESCE version, not because it’s the kindest number, but because it’s the one whose assumption everyone can see.', learning:'About the SQL: NULL is a missing value, not zero — it propagates through math and is skipped by aggregates, and COUNT(column) skips it too while COUNT(*) doesn’t. About the business language: “average spend” is an argument waiting to happen until you name the denominator and the treatment of missing data. “Over 10 expenses, missing counted as zero” ends the argument.'},
+'4.2':{situation:'Receipts settled, a bigger question remains: is the house actually sharing fairly month to month, or does one person carry the place while the others cover snacks? Maya fronts the rent — big, visible, monthly. Jordan and Sam pay a scatter of smaller bills. Memory says it “evens out.” Nobody has ever checked, and in a house, unchecked memory is how resentments get compound interest.', task:'The task is a per-person, per-month ledger: total paid by each roommate in each month, from the expenses table, with lost receipts treated as zero on purpose (last lesson’s rule, now house law). A roommate with a quiet month must still appear — a missing row would look like a missing roommate. And the month itself has to be carved out of the expense dates.', action:'strftime(’%Y-%m’, expense_date) is SQLite’s way of truncating a date to its month — other dialects say DATE_TRUNC, the idea is identical: bucket the timestamp, then group by bucket and person together. LEFT JOIN from roommates keeps everyone on the board; COALESCE inside SUM applies the house rule on missing receipts.', result:'The memory was wrong in an interesting direction. Maya carries both months on rent alone — $1,800 each — dwarfing everything else, while Jordan and Sam split the utilities and groceries that keep the house livable. It does not “even out”; it specializes. The house stops pretending otherwise and rebalances rent against the small bills on purpose.', learning:'About the SQL: truncating dates into month buckets and grouping by two dimensions (person × month) turns a pile of receipts into a ledger. About the business language: fairness claims need a grain. “We split things” at the house grain hides what “Maya pays $1,800 a month” at the roommate-month grain makes undeniable.'},
+'4.3':{situation:'Jordan is looking at the payments table and it might as well be written in license plates: from_roommate 2, to_roommate 1, amount 600. “I know money moved,” he says. “Who paid whom? In names. I’m not Venmo-ing a primary key.” Fair. The IDs were designed for the database’s convenience, not for three humans trying to settle a house without a fight.', task:'The task is translation: every payment row references roommates twice — once as the sender, once as the receiver — and both references need to become names in the same output row. The payments themselves don’t change; the question is how many times one lookup table has to be consulted to read a single row out loud.', action:'Join roommates twice. The first join, aliased a, resolves from_roommate into a sender name; the second, aliased b, resolves to_roommate into a receiver name. Same table, two aliases, two roles. This is the self-join family: one table playing multiple parts in a single query, with aliases keeping the parts straight. (Where the “other roommates table” doesn’t exist, the table joins to itself outright — same trick, one table.)', result:'Five payments, fully human: Jordan → Maya $600, Sam → Maya $600, Sam → Jordan $47.50, then October’s rent round, Jordan → Maya and Sam → Maya again. Jordan can read the house’s entire money history aloud in one breath. Nobody Venmos a primary key.', learning:'About the SQL: a table can join as many times as it has roles; aliases are what let one table be sender and receiver simultaneously. About the business language: IDs are for machines and names are for agreements. Any report a human has to act on — or argue about — gets resolved to names before it leaves the query.'},
+'4.4':{situation:'Before the house settles up, you want one clean fact: which expenses can’t be proven? Two amounts in the table are blank — receipts that never made it home. It would be easy to let those quietly become “someone underpaid.” It would also be exactly the kind of accusation that poisons a house, because nobody owes money on a number that doesn’t exist. First, find them. Then, find whose they are.', task:'The task is a query about absence. The expenses with lost receipts are defined by amount being NULL — not zero, not empty, missing. Attach the roommate’s name to each one, so the house knows who needs to reconstruct a number and who is completely off the hook. Two rows are expected; a third would mean the problem is bigger than anyone thought.', action:'amount = NULL never matches anything — NULL isn’t a value, so equality against it is meaningless. The test is IS NULL, and it’s the only honest one. Join expenses to roommates on paid_by so each missing receipt comes back wearing its owner’s name.', result:'Exactly two: Jordan’s cleaning and Sam’s household run. Maya’s record is complete; Jordan and Sam each owe the house one reconstructed receipt — not money, just proof. The accusation list is empty, because the missing list was checked first.', learning:'About the SQL: NULL is tested with IS NULL, never with =, and COUNT(amount) vs COUNT(*) differ precisely by these rows. About the business language: “unaccounted” and “unpaid” are different findings. Checking what’s missing before judging what’s owed is the whole ethic of working with incomplete data — in a house, or a company.'},
+'5.1':{situation:'Sunday night, twenty applications deep. One offer, a handful of interviews, and a long tail of silence. You’re exhausted in the particular way that makes people say “I’m just bad at applying” — a global verdict that helps nothing. But is it true? Your applications live in a table with a stage column, and a stage column means the hunt has a shape: applied, screen, interview, offer, rejected. Somewhere in that shape, the mass of your effort is dying at one specific step.', task:'The task is to count the funnel honestly: applications per stage, and each stage as a share of all twenty. Not vibes — proportions. If most applications die before the screen, the fix is targeting and resume fit; if they die at interview, the fix is interview craft. The query has to produce the evidence that chooses between those two completely different next months.', action:'A CTE does the counting in a named first step — WITH funnel AS (…) — so the second step can divide each stage’s count by the total and present shares. Naming the intermediate result is what turns a nested, unreadable query into two sentences a tired person can verify at midnight: here are the counts; here is what they mean.', result:'Screen 6, rejected 5, still sitting at applied 4, interview 4, offer 1. The funnel breaks at the screen: fourteen of twenty never got past first contact, while the applications that did reach interview converted respectably. Volume was never the problem. Next month’s effort goes into role fit and the first impression — not into applying to forty more.', learning:'About the SQL: a CTE (WITH …) names a temporary result so a query reads top-to-bottom in the order you reasoned it; funnel math is just GROUP BY on a stage plus each group’s share. About the business language: “I’m bad at applying” is a blend. “The break is at the screen stage” names a stage, a metric, and a fix — that’s what a funnel is for.'},
+'5.2':{situation:'Same resume, same effort, three different worlds. Startup applications keep turning into conversations; bigtech applications vanish into portals; agency applications are a coin flip you keep losing. You’re tempted to conclude something about yourself. But an older lesson from the coffee shop whispers: a blended number is usually segments behaving differently — and right now your whole hunt is one blended number.', task:'The task is to cut the funnel by segment: for startups, bigtech, and agencies separately, count the applications, count how many reached interview-or-better, and compute the rate. “Reached interview-or-better” doesn’t exist as a column — it has to be counted conditionally, inside each group, from the stage values. Rates, not raw counts, because the segments aren’t the same size.', action:'SUM(CASE WHEN stage IN (’interview’,’offer’) THEN 1 ELSE 0 END) counts a subset inside each GROUP BY segment — conditional aggregation, the same engine that powers pivoting. One query returns three little funnels side by side, and the interview question answers itself by comparison instead of by mood.', result:'Startups: 4 of 8 reach interview — 50%. Bigtech: 1 of 6, 16.7%. Agency: 0 of 6. It isn’t effort and it isn’t talent; it’s mix. Half of a warm segment beats all of a cold one. Next month’s application list tilts hard toward startups, and the bigtech portal applications get the smallest slice of the week.', learning:'About the SQL: CASE inside an aggregate counts or sums a filtered subset per group — the foundation of pivots and scorecards. About the business language: this is mix shift — the overall rate moved because the composition changed. “Is this a behavior problem or a mix problem?” is the question that keeps you from fixing the wrong thing.'},
+'5.3':{situation:'It’s a mock interview, and the interviewer slides a query across the table: “This filters on the alias n inside WHERE, and it errors. Most candidates tell me it’s a syntax problem. It isn’t. Why does it error?” Your first instinct — it ran fine in your head — is exactly the trap. The query reads in the order SELECT, FROM, WHERE. SQL does not execute in the order it reads, and this question exists to find out whether you know the real order.', task:'The task is demonstration, not repair-first. Run the broken query and read the error literally: “no such column: n.” Then explain it from execution order — FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY — and only then fix the query so it returns the stages with more than two applications. The fix matters less than the why; the interviewer is buying the why.', action:'At WHERE time, the alias n has not been born: aliases are created in SELECT, which executes fifth, after WHERE has already run second. Filtering on n in WHERE is addressing a letter that hasn’t been written. The repair restructures the work: a CTE computes stage and count first, and the outer query filters on the finished column. Same logic, legal order.', result:'The CTE version returns screen (6), rejected (5), applied (4), interview (4) — the stages above the threshold — and, more valuable than the rows, you can now answer the follow-up before it’s asked. Execution order stops being trivia and becomes the debugging instinct behind every “why did SQL do that?” moment.', learning:'About the SQL: SQL executes FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY, which is why aliases can’t be filtered in WHERE and why clause order in your file isn’t execution order. About the business language: reciting this order calmly, while debugging out loud, is a trained-analyst signal. Interviewers aren’t testing the fact; they’re testing whether errors make you more precise or more flustered.'},
+'5.4':{situation:'Look at the four companies that actually screened you and a pattern itches: the one that moved fastest is the one that made the offer. Coincidence? Maybe. But response speed felt like information the whole way through — fast replies read as enthusiasm, slow ones as a slow no. Your events table has both milestones for the applications that got screens: the day you applied and the day they called. The itch is testable.', task:'The task is duration: for each company that screened you, days from application to screen, fastest first. Each application’s two events live in the same table as separate rows, so the query has to pair an applied-row with its screen-row for the same application, subtract the dates, and rank. Five companies got screens; the Marlow offer is the hypothesis.', action:'The events table joins itself: one alias hunts event_type = ’applied’, the other event_type = ’screen’, matched on application_id. julianday(screen) minus julianday(applied) turns two timestamps into a duration in days — other dialects spell it DATEDIFF, the idea is portable. Cast it to a whole number and sort ascending: fastest first, hypothesis on top.', result:'Marlow screened in 4 days and offered. Verdant took 5, Kiteway 6, Northwind and Corelink 7. It’s five data points, not a law of nature — but the fastest mover made the only offer, and the two slowest never got past the interview. Speed was signal: about their enthusiasm, and maybe about fit. Next hunt, response time goes on the tracker as a column worth watching, not a feeling worth trusting.', learning:'About the SQL: self-joining an events table pairs milestones for the same entity, and date subtraction converts paired timestamps into durations — the basis of cycle-time and time-to-stage metrics everywhere. About the business language: “they got back to me fast” is an anecdote; “median days-to-screen was 6, and the offer came from the 4-day responder” is a metric. Durations turn impressions into evidence.'},
+'0.1':{situation:'Day one. The shop’s entire history is a table of fifteen orders, and nobody has looked at it directly yet — every conversation so far has been memory and opinion. Before a single calculation gets trusted, someone has to do the least glamorous thing in data work: open the table and read it. Drink, size, price. Nothing else. The temptation is to start summarizing immediately; summaries of data you’ve never seen are just rumors with arithmetic.', task:'The task is deliberately small: return three columns for every order. No filtering (you don’t know what matters yet), no aggregation (you’d be averaging a thing you haven’t met). SELECT drink, size, price FROM orders — and then read, row by row, the way you’d read a receipt drawer.', action:'SELECT is the reading verb. Naming the columns instead of reaching for SELECT * is the first act of discipline: it declares what you care about and makes the output explain itself to the next person. Fifteen rows come back, one per order. The grain announces itself — one row is one order — and patterns surface before any math touches them: lattes repeat, espresso sits at the cheap end, matcha leans large.', result:'No decision gets made, and that’s the point. But the room now shares fifteen facts instead of five opinions, and every later query in this database inherits this moment: you know what a row is, what the values look like, and what “normal” is before anyone says the word “average.”', learning:'About the SQL: every query begins as reading — SELECT the columns, FROM the table. About the business language: “let me look at the data” is a complete, professional sentence. Analysts who skip it end up defending summaries of tables they never actually saw.'},
+'0.2':{situation:'Jordan works the counter, and counter-knowledge is specific: he doesn’t care about “orders,” he cares about the latte people. One of them is in every day. So when the first summary work begins, his ask is the natural second step in all of data: “Just the lattes. Who’s buying them, and what are they paying?” Not the whole haystack — the needles he already suspects are there.', task:'The task is row selection: from fifteen orders, keep the ones where the drink is latte, and show who bought each and at what price. Five rows should survive. Text gets single quotes, because SQL treats unquoted words as column names — a small syntax rule with a loud error message when forgotten.', action:'WHERE is the filter clause, and it runs early: before any grouping, sorting, or math, every row is tested — is drink equal to ’latte’? — and only the yeses continue. SELECT customer_name, drink, price FROM orders WHERE drink = ’latte’ is three decisions in one breath: which facts, from where, under what condition.', result:'Five latte orders, four distinct humans, and there she is: Maya, twice, at $5.50 each. Jordan’s suspicion graduates from counter-lore to a query result. The shop’s latte business is partly one regular’s habit — a fact that will matter enormously when someone later counts “customers” by counting receipts.', learning:'About the SQL: WHERE filters rows with a yes/no condition, and it executes before GROUP BY ever sees the data. About the business language: “just the lattes” is a segment — every filter quietly defines the population you’re making claims about, and naming it (“among latte orders…”) keeps claims honest.'},
+'0.3':{situation:'Maya is rethinking the top of the menu board, and she wants to see the ceiling: “What are the three most expensive orders we’ve actually sold?” Not the most common, not the average — the extreme, because the extreme is where pricing headroom lives. It’s a small ask with an ordering trap inside it: “three most expensive” is meaningless until the rows are sorted, and grabbing any three rows first would answer a question nobody asked.', task:'The task has a strict sequence: rank every order by price, highest first, and only then take three. Sort, then limit. Reverse the order of operations and you get three random orders wearing a “top 3” costume. The query must also carry the customer and drink along, because a price without a story is trivia.', action:'ORDER BY price DESC arranges the finished result from priciest to cheapest — DESC, descending, biggest first. LIMIT 3 then keeps the podium. Two clauses, executed in the order sorting-then-cutting even though your eyes meet them in the order written; this is the first place SQL teaches you that reading order and execution order are cousins, not twins.', result:'A $7.00 large matcha (Priya), a $6.50 large latte (Alex), a $6.00 medium matcha. Two of the top three are matcha, all three are medium-or-large: the menu’s ceiling is a big-drink ceiling. If Maya wants to test a premium tier, the data just told her where the headroom already lives.', learning:'About the SQL: ORDER BY + LIMIT is the universal “top N” pattern, and LIMIT without ORDER BY returns arbitrary rows. About the business language: “top three” is a ranking claim — it always owes the listener its criterion. “Top three by price” can be checked; “our best orders” cannot.'},
+'1.5':{situation:'A week into the GROUP BY lessons, Maya asks the question every owner eventually asks, usually while staring out a window: “Forget drinks for a second. How is the shop doing — day to day? Are we growing?” The orders table can answer her, but only if the grain changes. Every query so far has sliced by drink; she’s now asking for the business sliced by time, and time answers differently than categories do.', task:'The task is to re-bucket the same fifteen orders by day: one row per date, orders counted, revenue summed, presented in calendar order so the eye can travel. Six days of shop life, six rows. The question sounds simple — “are we growing?” — and the honest answer will depend on whether a pattern survives being looked at, or dissolves into wobble.', action:'GROUP BY ordered_at does to dates what GROUP BY drink did to drinks: collapses each day’s orders into one row with aggregates inside. ORDER BY ordered_at (not by revenue) keeps time’s arrow intact — sorting a trend by size would scramble the story into a ranking, which is a different and lesser thing.', result:'$10.50, $15.00, $17.50, $9.00, $17.00, $8.50. A spike on Oct 3, a collapse on Oct 6, no staircase anywhere. The analysis is the discipline to say it plainly: six days is weather, not a trend. Maya doesn’t get the growth story she wanted; she gets something more valuable — knowing she doesn’t have one yet, and how many more days of data would change that.', learning:'About the SQL: grouping by a date column converts a table into a time series — same machinery, time-shaped grain. About the business language: “trend” is a claim about direction over enough points; naming the window (“over six days”) and refusing the word when the data is thin is what separates an analyst from a narrator.'},
+'2.5':{situation:'The newest YouTube video is eating the channel. Not in a bad way — in a lopsided way. Views are healthy in total, but you can feel the catalog thinning behind the latest upload, and a quiet question forms that totals can’t answer: how much of this channel is one video? If the answer is “most of it,” the channel isn’t a library; it’s a single point of failure with good numbers.', task:'The task is share, not size: for each YouTube post, views as a percentage of YouTube’s total views. Every post must keep its own row (the catalog is the subject), yet every row needs the same denominator — the platform total — sitting beside it. That shape, detail plus group total in one result, is exactly what GROUP BY refuses to give you, because grouping would erase the posts.', action:'SUM(views) OVER (PARTITION BY platform) computes YouTube’s 8,550 total once and attaches it to all four rows; each post then divides its own views by the shared total. WHERE platform = ’YouTube’ narrows the stage first. The window function is doing double duty: aggregate and annotation in a single clause.', result:'14.0%, 21.6%, 28.1%, 36.3%. Each video has outperformed the last — a great story — and the newest alone is over a third of the channel. Both readings are true at once: momentum is real, and concentration is risk. The next series gets planned as a deliberate second pillar instead of a victory lap.', learning:'About the SQL: percent-of-total is a division between a row value and a windowed group total; the partition keeps the groups separate while the rows stay whole. About the business language: “share” reframes success as dependence. “Our top video is 36% of views” starts a strategy conversation that “views are up” never will.'},
+'3.5':{situation:'Every store has folklore about its best customers, and yours has congealed into a sentence: “Alex spends a lot.” A lot compared to what? Compared to Sam? To the average? Folklore never specifies its denominator, which is why it survives every meeting. You decide to give “big spender” a definition it can be tested against: total spend above the average customer’s total spend. The average has to come from the same data, or the comparison is rigged from the start.', task:'Two computations, nested. First, per-customer lifetime totals — one number for each of the six customers who ever bought. Second, the average of those six numbers ($151.67), computed inside the query itself so the benchmark is born from the same table it judges. Then keep the customers who clear it, biggest first.', action:'The CTE named t holds the per-customer totals; the subquery (SELECT AVG(total) FROM t) reaches back into that step and returns the single benchmark value; the outer WHERE compares each customer against it. This layering is the point: a threshold computed by hand and typed in as 151.67 would rot the moment a seventh customer buys something. Computed inline, it can’t rot.', result:'Alex, $350. Sam, $210. Nobody else clears $151.67 — Priya sits at $35, Rin at $130. Two customers account for $560 of the store’s $910. “Alex spends a lot” is now “two of six customers beat the average, and one carries 38% of revenue”: the folklore, made falsifiable, turns into a retention priority and a concentration warning in the same breath.', learning:'About the SQL: a subquery is a query whose result feeds another — perfect for benchmarks, thresholds, and “compared to the average” questions. About the business language: every comparative adjective owes a denominator. “Above the average customer’s $151.67” can be audited; “big spender” can only be repeated.'},
+'4.5':{situation:'It ends the way all house money stories end: at the kitchen table, with three versions of fairness. Maya fronted two rents — surely she’s ahead. Jordan paid a mountain of small bills and sent two $600 payments — surely he is. Sam has receipts and grievances in equal measure. Memory cannot settle this, because the money moved through three different flows (expenses fronted, payments sent, payments received), and no human holds all three ledgers in their head at once.', task:'The task is netting. For each roommate: everything they fronted for the house (missing receipts counted as zero — the rule the house already ratified), plus every payment they sent, minus every payment they received. That single signed number, net borne, is what each person has truly carried. Fair share for reference: $4,193.75 split three ways is about $1,397.92.', action:'Three CTEs, three flows: paid (expenses per person), sent (payments out), recv (payments in). The final select joins all three onto the roommate list — LEFT JOINs, so a person missing from any flow shows up with zeros instead of disappearing — and COALESCE wraps every seam, because one NULL in the arithmetic would NULL out an entire roommate. Complexity, but composed: each step small enough to verify, combined in reading order.', result:'Jordan has borne the most: $1,505.30. Sam: $1,428.45. Maya — the rent-fronter, the obvious “ahead” candidate — has borne the least: $1,260.00, because $2,400 flowed back to her. Against the ~$1,397.92 fair share, the table settles itself: Sam owes Jordan about $107, Maya owes about $138, and the house argument ends with arithmetic where the adjectives used to be.', learning:'About the SQL: real questions compose — named CTE steps for each flow, combined once; and COALESCE at every join seam is what keeps missing pieces from poisoning totals. About the business language: “net” is the grown-up form of every money argument. Gross claims (“I paid the rent!”) start fights; net positions, with the flows named, end them.'},
+'5.5':{situation:'Monday morning. Twenty applications are out in the world, and they are not all equally alive. Some became screens and interviews — those have their own momentum. But a few went out the door and into silence, and silence compounds: every week an unanswered application sits, it looks less like a pending decision and more like a dead one. You don’t need motivation this morning. You need a list, ordered by who has waited longest, so follow-up effort lands where time has done the most damage.', task:'The task is aging. Filter the tracker to applications still at the applied stage — no screen, no rejection, just waiting. Measure each one’s age against a fixed as-of date, Sep 30, 2026, the freshest date in the data, so anyone re-running this gets the same numbers. Rank longest-first: the output order is the work order.', action:'WHERE stage = ’applied’ isolates the waiting; julianday(’2026-09-30’) minus julianday(applied_date) converts two dates into a duration in days; CAST makes it a whole number a human can say; ORDER BY days_waiting DESC puts the stalest application at the top of the list where it belongs. Nothing exotic — the craft is in the as-of date being chosen, stated, and defensible.', result:'Umbra, 12 days. Loomly, 11. Ostro, 5. Tandem, 1. Four follow-ups in the order they’re owed — two of them genuinely stale, one merely young. The Monday task writes itself, and it isn’t “apply to more”; it’s “revive the two oldest conversations before opening new ones.”', learning:'About the SQL: durations are date subtraction against a stated as-of point; filtering on stage plus sorting by age turns a tracker into a work queue. About the business language: “gone quiet” is a feeling until it has days attached. “Twelve days at the applied stage” triages itself — aging is how pipelines tell you where to stand.'}
+};
+
+function storyCard(d, l){
+  // Every lesson gets its story, told in paragraphs (STAR+L) — not a slide dump.
+  let raw = STORIES[l.id];
+  if(!raw && l.id==='1.1') raw = EP1_STORY;
+  if(!raw) return '';
+  const s = { s: raw.situation, t: raw.task, a: raw.action, r: raw.result, l: raw.learning };
+  const isEp1 = (d.id==='coffee' && l.id==='1.1');
+  return `<div class="card">
+    <h3>📖 ${isEp1?'Episode 1, as a story':'The story behind this lesson'} (STAR+L)</h3>
+    ${isEp1?'<p style="font-size:13.5px;color:#4c4636;margin-top:0">This is the slide deck rewritten as paragraphs — the same situation you’re about to solve below.</p>':''}
+    <p><b style="color:#1f7a4d">Situation —</b> ${s.s}</p>
+    <p><b style="color:#1f7a4d">Task —</b> ${s.t}</p>
+    <p><b style="color:#1f7a4d">Action —</b> ${s.a}</p>
+    <p><b style="color:#1f7a4d">Result —</b> ${s.r}</p>
+    <p style="margin-bottom:0"><b style="color:#1f7a4d">Learning —</b> ${s.l}</p>
+  </div>`;
+}
+function showLesson(d, l){
+  curDb = d; curLesson = l; renderSidebar();
+  const stage = document.getElementById('stage');
+  const tbl = d.schema.split('\n').filter(x=>x.trim()).join('\n');
+  const m = META[l.id] || {};
+  stage.innerHTML = `
+    <div class="card">
+      <h3>${d.name} — Lesson ${l.id}: ${l.title} ${l.worked?'<small style="color:#1f7a4d">(worked example — build it from the steps; the full version waits in the last hint)</small>':''}</h3>
+      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">① Situation — someone needs a solution</p>
+      <p><em>${d.story}</em></p>
+      ${m.ask?`<p style="background:#fdf6e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 14px"><b>${m.asker} asks:</b> ${m.ask}</p>`:''}
+      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">② Task — what actually has to be done</p>
+      ${(m.task||[l.problem]).map(t=>`<p style="margin:4px 0">• ${t}</p>`).join('')}
+      <pre class="schema">${tbl.replace(/</g,'&lt;')}</pre>
+    </div>
+    ${storyCard(d,l)}
+    <div class="card dbview">
+      <h3>📊 The database you’re working with</h3>
+      <p style="font-size:13.5px;color:#4c4636;margin-top:0">This is the live data your query runs against. Edit it by accident? Hit Reset — this view refreshes so you can always see the starting truth.</p>
+      <div id="dbview"></div>
+    </div>
+    <div class="card">
+      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">③ Action — write the SQL that gets that result</p>
+      <h3>Example problem</h3><p>${l.problem}</p>
+      <details style="margin:0 0 10px">
+        <summary style="cursor:pointer;font-weight:bold;color:#1f7a4d;font-size:14px">Hints — how to think through the task (open when stuck)</summary>
+        <div style="background:#f4efe2;border:1px dashed #e8b33d;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:14px">
+          ${(m.task||[l.problem]).map((t,i)=>`<p style="margin:4px 0"><b>Step ${i+1}:</b> ${t}</p>`).join('')}
+          <p style="margin:6px 0 0"><b>Read it aloud first:</b> if you cannot say what one row of the output means, the grain is wrong.</p>
+          <details style="margin-top:10px">
+            <summary style="cursor:pointer;font-weight:bold;color:#b03a2e;font-size:13.5px">Last hint — the full query (build yours first; this is the answer)</summary>
+            <pre style="background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap;margin:8px 0 0">${l.starter.replace(/</g,'&lt;')}</pre>
+          </details>
+        </div>
+      </details>
+      <p style="font-size:13px;color:#6b6250;margin:0 0 6px">Start by looking at the data — the editor begins with <code>SELECT *</code> on this database’s first table. Run it, read the table, then build the real query.</p>
+      <textarea id="sqlbox" spellcheck="false"></textarea>
+      <div class="btnrow">
+        <button class="act" id="run">▶ Run query</button>
+        <button class="ghost" id="reset">↺ Reset database</button>
+        <button class="ghost" id="clear">Clear editor</button>
+        <button class="ghost" id="mark">${done[d.id+':'+l.id]?'✓ Completed':'Mark complete'}</button>
+      </div>
+      <div id="status"></div>
+      <div id="out"></div>
+    </div>
+    <div class="card" style="border-color:#1f7a4d">
+      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">④ Result — what the right answer shows</p>
+      ${m.result?`<p>${m.result}</p>`:'<p>Run the query above and compare the output to the problem: does it actually answer the ask?</p>'}
+      <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">⑤ Learning — what we learned</p>
+      <p style="margin:4px 0"><b>About the SQL:</b> ${m.learnSql||''}</p>
+      <p style="margin:8px 0 4px"><b>About the business language:</b></p>
+      ${l.vocab.map(v=>`<div class="vocab"><b>${v[0]}:</b> ${v[1]}</div>`).join('')}
+      <div class="sayit">Say it like you work there: ${l.sayit}</div>
+      ${m.tip?`<div class="tipbox">💡 <b>Background tip — both are allowed:</b> ${m.tip}</div>`:''}
+    </div>
+    <div class="donatebox">If this lesson helped, <a href="${DONATE_URL}" target="_blank" rel="noopener">☕ buy me a coffee</a> — it keeps Speak SQL free for the next learner.</div>`;
+  const firstTable = (d.schema.match(/CREATE TABLE\s+(\w+)/i)||[])[1] || 'orders';
+  document.getElementById('sqlbox').value = 'SELECT * FROM ' + firstTable + ';';
+  renderDbViewer();
+  document.getElementById('run').onclick = runQuery;
+  document.getElementById('reset').onclick = ()=>{ db=new SQL.Database(); db.run(d.schema); db.run(d.seed); renderDbViewer(); setStatus('Database reset to its starting data. Nothing else changed.',''); document.getElementById('out').innerHTML=''; };
+  document.getElementById('clear').onclick = ()=>{ document.getElementById('sqlbox').value=''; };
+  document.getElementById('mark').onclick = (e)=>{ const k=d.id+':'+l.id; done[k]=!done[k]; if(!done[k]) delete done[k]; saveDone(); e.target.textContent = done[k]?'✓ Completed':'Mark complete'; };
+}
+function setStatus(msg, cls){ const s=document.getElementById('status'); s.innerHTML=msg; s.className=cls; }
+function runQuery(){
+  const q = document.getElementById('sqlbox').value.trim();
+  const out = document.getElementById('out');
+  if(!q){ setStatus('Write a query first — even a wrong one teaches more than a blank box.','err'); return; }
+  try{
+    const res = db.exec(q);
+    renderDbViewer();
+    if(!res.length){ setStatus('Query ran. No result set (or the table is empty).',''); out.innerHTML=''; return; }
+    const {columns, values} = res[0];
+    out.innerHTML = `<table class="res"><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr>${values.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table>`;
+    const ok = checkResult(res, curLesson);
+    if(ok===true){ done[curDb.id+':'+curLesson.id]=true; saveDone(); setStatus('✓ Correct — that matches the expected result. Lesson marked complete. Say the sentence out loud before you move on.','ok'); }
+    else if(ok===false){ setStatus('Ran fine, but the result doesn’t match the problem yet. Check your grain, then your filter. Reset and retry if the data got edited.','err'); }
+    else setStatus('Ran. Compare it against the problem statement — does it actually answer it?','ok');
+  }catch(e){ setStatus('SQL error: '+e.message+' — read it literally; it usually names the exact line that broke.','err'); out.innerHTML=''; }
+}
+initSqlJs({ locateFile: f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/'+f }).then(sql=>{
+  SQL = sql; renderProgress(); renderSidebar(); loadDb(DATABASES[0]);
+}).catch(e=>{ document.getElementById('stage').innerHTML = '<div class="card"><h3>Could not load the SQL engine</h3><p>'+e.message+'</p></div>'; });
+</script>
+</body>
+</html>
