@@ -5,62 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Speak SQL — Real-Life Lessons</title>
 <style>
-  :root{--ink:#16211a;--green:#1f7a4d;--paper:#f7f4ec;--card:#fff;--line:#ddd6c4;--gold:#e8b33d}
+  /* Design: mockup 02 (2026-10-08) — warm paper, ink, orange accent, hard-shadow donate */
+  :root{--ink:#1c1917;--paper:#f6f3ec;--card:#fff;--line:#e7e0d2;--accent:#ea580c;--accent-ink:#9a3412;--accent-soft:#fff7ed;--muted:#78716c;--green:#16a34a}
   *{box-sizing:border-box}
-  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink)}
-  header{background:var(--ink);color:var(--paper);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-  header h1{margin:0;font-size:22px;letter-spacing:.5px}
-  header h1 span{color:var(--gold)}
-  .pbar-wrap{min-width:220px}
-  .pbar{height:10px;background:#2e4237;border-radius:5px;overflow:hidden}
-  .pbar>div{height:100%;background:var(--gold);width:0%;transition:width .3s}
-  .pbar-label{font-size:12px;text-align:right;margin-top:3px}
-  main{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:calc(100vh - 62px)}
-  aside{border-right:1px solid var(--line);padding:14px;background:#efe9da;overflow-y:auto;max-height:calc(100vh - 62px)}
-  aside h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin:14px 0 6px}
-  .dbbtn{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer;font-family:inherit;font-size:14px}
-  .dbbtn.active{border-color:var(--green);box-shadow:inset 3px 0 0 var(--green)}
-  .dbbtn small{display:block;color:#6b6250;font-size:12px;margin-top:2px}
-  .lessonbtn{display:block;width:100%;text-align:left;background:transparent;border:none;border-left:3px solid transparent;padding:6px 8px;cursor:pointer;font-family:inherit;font-size:13.5px;border-radius:0 6px 6px 0}
-  .lessonbtn.active{background:#fff;border-left-color:var(--gold)}
-  .lessonbtn .done{color:var(--green);font-weight:bold}
-  section{padding:20px 24px;overflow-y:auto;max-height:calc(100vh - 62px)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
-  .card h3{margin:0 0 8px;font-size:17px}
-  .vocab{background:#eef5f0;border:1px solid #cfe3d6;border-radius:8px;padding:10px 14px;margin:8px 0;font-size:14.5px}
-  .vocab b{color:var(--green)}
-  .sayit{background:#fdf6e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 14px;font-style:italic;font-size:14.5px;margin-top:8px}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink)}
+  header{background:transparent;color:var(--ink);padding:22px 28px 6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:1280px;margin:0 auto}
+  header h1{margin:0;font-size:24px;font-weight:900;letter-spacing:-.03em}
+  header h1 span{color:var(--accent)}
+  .pbar-wrap{min-width:230px}
+  .pbar{height:10px;background:#e7e5e4;border-radius:99px;overflow:hidden}
+  .pbar>div{height:100%;background:var(--accent);width:0%;transition:width .45s cubic-bezier(.2,1,.3,1)}
+  .pbar-label{font-size:12px;text-align:right;margin-top:4px;color:var(--muted)}
+  main{display:grid;grid-template-columns:300px 1fr;gap:18px;min-height:calc(100vh - 80px);max-width:1280px;margin:0 auto;padding:14px 28px 40px}
+  aside{border:1px solid var(--line);border-radius:22px;padding:18px;background:var(--card);box-shadow:0 12px 32px rgba(28,25,23,.06);overflow-y:auto;max-height:calc(100vh - 110px)}
+  aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--accent-ink);margin:16px 0 6px}
+  aside h2:first-child{margin-top:0}
+  .lessonbtn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:transparent;border:1px solid transparent;padding:10px 12px;margin-top:4px;cursor:pointer;font-family:inherit;font-size:13.5px;border-radius:12px;color:var(--ink)}
+  .lessonbtn:hover{background:#fafaf9}
+  .lessonbtn.active{background:var(--accent-soft);border-color:#fed7aa;font-weight:800;color:var(--accent-ink)}
+  .lessonbtn .done{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:bold;flex:none;animation:checkpop .5s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes checkpop{from{transform:scale(.4);opacity:0}}
+  section{padding:0;overflow-y:auto;max-height:calc(100vh - 110px)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px 22px;margin-bottom:18px;box-shadow:0 12px 32px rgba(28,25,23,.06)}
+  .card h3{margin:0 0 8px;font-size:19px;letter-spacing:-.02em}
+  .vocab{background:#fafaf9;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0;font-size:14.5px}
+  .vocab b{color:var(--accent-ink)}
+  .sayit{background:var(--accent-soft);border:1px solid #fed7aa;border-radius:12px;padding:10px 14px;font-size:14.5px;margin-top:8px}
   .tables{font-size:13px;color:#4c4636}
-  .tables code{background:#f0ead8;padding:1px 5px;border-radius:4px}
-  pre.schema{background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 14px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap}
-  textarea{width:100%;min-height:120px;font-family:'Courier New',monospace;font-size:14px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffef8}
-  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-  button.act{background:var(--green);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px}
-  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px}
+  .tables code{background:#f5efe2;padding:1px 5px;border-radius:4px}
+  pre.schema{background:#111827;color:#e5e7eb;border-radius:16px;padding:14px 16px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap}
+  textarea{width:100%;min-height:130px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:14.5px;line-height:1.6;padding:16px;border:1px solid #020617;border-radius:16px;background:#111827;color:#e5e7eb;caret-color:#f472b6;box-shadow:0 12px 32px rgba(2,6,23,.25)}
+  textarea:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  button.act{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:10px 20px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;box-shadow:3px 3px 0 rgba(28,25,23,.25)}
+  button.act:hover{background:#292524}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);padding:10px 16px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600}
   button.act:disabled{opacity:.5}
   #status{font-size:14px;min-height:20px;margin:6px 0}
-  .ok{color:var(--green);font-weight:bold}.err{color:#b03a2e}
-  table.res{border-collapse:collapse;font-size:13.5px;margin-top:8px}
-  table.res th,table.res td{border:1px solid var(--line);padding:5px 10px;text-align:left}
-  table.res th{background:#efe9da}
+  .ok{color:var(--green);font-weight:bold}.err{color:#b91c1c}
+  table.res{border-collapse:collapse;font-size:13.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+  table.res th,table.res td{border:1px solid #f0ebe0;padding:7px 11px;text-align:left}
+  table.res th{background:#fafaf9;color:var(--muted);font-weight:700}
   .dbview table.res{margin:6px 0 14px}
-  .dbview .tblwrap{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:4px 0 14px}
+  .dbview .tblwrap{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:16px;margin:4px 0 14px}
   .dbview .tblwrap table{margin:0;border:none;width:100%}
   .dbview .tblwrap th{position:sticky;top:0}
-  .dbview h4{margin:10px 0 2px;font-size:14.5px;color:var(--green)}
-  .dbview .rowcount{font-size:12px;color:#6b6250}
-  details.slides summary{cursor:pointer;font-weight:bold;font-size:15px;color:var(--green)}
+  .dbview h4{margin:10px 0 2px;font-size:14.5px;color:var(--accent-ink)}
+  .dbview .rowcount{font-size:12px;color:var(--muted)}
+  details.slides summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--accent-ink)}
   details.slides .slide{border-top:1px dashed var(--line);padding:10px 2px}
   details.slides .slide h4{margin:2px 0 4px;font-size:14.5px}
   details.slides .slide p{margin:3px 0;font-size:14px}
-  details.slides pre{background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto}
-  details.slides .num{color:var(--gold);font-weight:bold}
-  .hintbox{display:none;background:#f4efe2;border:1px dashed var(--gold);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;font-family:'Courier New',monospace}
-  .tipbox{background:#f0f4f8;border:1px dashed #b8c9d9;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px;color:#31445a}
-  .donatebox{margin-top:16px;text-align:center;font-size:13.5px;color:#6b6250}
-  .donatebox a{display:inline-block;background:#ffdd00;color:#1c2620;font-weight:bold;text-decoration:none;padding:9px 18px;border-radius:999px;border:1px solid #e8c400}
-  .donatebox a:hover{background:#ffe94d}
-  aside .donatebox{padding:12px 6px 4px;border-top:1px solid #e3ddcb;margin-top:14px}
+  details.slides pre{background:#111827;color:#e5e7eb;border-radius:12px;padding:10px 12px;font-size:12.5px;overflow-x:auto}
+  details.slides .num{color:var(--accent);font-weight:bold}
+  .hintbox{display:none;background:var(--accent-soft);border:1px dashed #fdba74;border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tipbox{background:#f0f4f8;border:1px dashed #b8c9d9;border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:12px;color:#31445a}
+  .donatebox{margin-top:16px;text-align:center;font-size:13.5px;color:var(--muted)}
+  .donatebox a{display:inline-block;background:#ffdd00;color:var(--ink);font-weight:800;text-decoration:none;padding:10px 18px;border-radius:999px;border:1px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+  .donatebox a:hover{background:#ffe94d;transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+  aside .donatebox{padding:14px 6px 4px;border-top:1px solid #f5f5f4;margin-top:16px}
   @media(max-width:800px){main{grid-template-columns:1fr}aside,section{max-height:none}}
 </style>
 </head>
@@ -606,11 +609,11 @@ function storyCard(d, l){
   return `<div class="card">
     <h3>📖 ${isEp1?'Episode 1, as a story':'The story behind this lesson'} (STAR+L)</h3>
     ${isEp1?'<p style="font-size:13.5px;color:#4c4636;margin-top:0">This is the slide deck rewritten as paragraphs — the same situation you’re about to solve below.</p>':''}
-    <p><b style="color:#1f7a4d">Situation —</b> ${s.s}</p>
-    <p><b style="color:#1f7a4d">Task —</b> ${s.t}</p>
-    <p><b style="color:#1f7a4d">Action —</b> ${s.a}</p>
-    <p><b style="color:#1f7a4d">Result —</b> ${s.r}</p>
-    <p style="margin-bottom:0"><b style="color:#1f7a4d">Learning —</b> ${s.l}</p>
+    <p><b style="color:#9a3412">Situation —</b> ${s.s}</p>
+    <p><b style="color:#9a3412">Task —</b> ${s.t}</p>
+    <p><b style="color:#9a3412">Action —</b> ${s.a}</p>
+    <p><b style="color:#9a3412">Result —</b> ${s.r}</p>
+    <p style="margin-bottom:0"><b style="color:#9a3412">Learning —</b> ${s.l}</p>
   </div>`;
 }
 function showLesson(d, l){
@@ -620,7 +623,7 @@ function showLesson(d, l){
   const m = META[l.id] || {};
   stage.innerHTML = `
     <div class="card">
-      <h3>${d.name} — Lesson ${l.id}: ${l.title} ${l.worked?'<small style="color:#1f7a4d">(worked example — build it from the steps; the full version waits in the last hint)</small>':''}</h3>
+      <h3>${d.name} — Lesson ${l.id}: ${l.title} ${l.worked?'<small style="color:#9a3412">(worked example — build it from the steps; the full version waits in the last hint)</small>':''}</h3>
       <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">① Situation — someone needs a solution</p>
       <p><em>${d.story}</em></p>
       ${m.ask?`<p style="background:#fdf6e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 14px"><b>${m.asker} asks:</b> ${m.ask}</p>`:''}
@@ -638,13 +641,13 @@ function showLesson(d, l){
       <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">③ Action — write the SQL that gets that result</p>
       <h3>Example problem</h3><p>${l.problem}</p>
       <details style="margin:0 0 10px">
-        <summary style="cursor:pointer;font-weight:bold;color:#1f7a4d;font-size:14px">Hints — how to think through the task (open when stuck)</summary>
+        <summary style="cursor:pointer;font-weight:bold;color:#9a3412;font-size:14px">Hints — how to think through the task (open when stuck)</summary>
         <div style="background:#f4efe2;border:1px dashed #e8b33d;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:14px">
           ${(m.task||[l.problem]).map((t,i)=>`<p style="margin:4px 0"><b>Step ${i+1}:</b> ${t}</p>`).join('')}
           <p style="margin:6px 0 0"><b>Read it aloud first:</b> if you cannot say what one row of the output means, the grain is wrong.</p>
           <details style="margin-top:10px">
             <summary style="cursor:pointer;font-weight:bold;color:#b03a2e;font-size:13.5px">Last hint — the full query (build yours first; this is the answer)</summary>
-            <pre style="background:#1c2620;color:#cfe8d8;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap;margin:8px 0 0">${l.starter.replace(/</g,'&lt;')}</pre>
+            <pre style="background:#111827;color:#e5e7eb;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap;margin:8px 0 0">${l.starter.replace(/</g,'&lt;')}</pre>
           </details>
         </div>
       </details>
@@ -659,7 +662,7 @@ function showLesson(d, l){
       <div id="status"></div>
       <div id="out"></div>
     </div>
-    <div class="card" style="border-color:#1f7a4d">
+    <div class="card" style="border-color:#9a3412">
       <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">④ Result — what the right answer shows</p>
       ${m.result?`<p>${m.result}</p>`:'<p>Run the query above and compare the output to the problem: does it actually answer the ask?</p>'}
       <p style="font-size:13px;color:#6b6250;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">⑤ Learning — what we learned</p>
