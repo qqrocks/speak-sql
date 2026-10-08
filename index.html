@@ -503,7 +503,7 @@ const META = {
 '5.5':{asker:'You, Monday morning', ask:'“Some of these applications have just… sat there. Who’s gone quiet on me? Give me a follow-up list.”', task:['Filter to stage = applied — the ones still waiting for first contact.','Measure age against an as-of date (Sep 30, 2026): days since applied.','Longest wait first: that ordering is the work list.'], result:'Umbra has waited 12 days, Loomly 11, Ostro 5, Tandem 1. Four follow-ups, in the order they’re owed.', learnSql:'Date subtraction against a fixed as-of date turns a status column into an aging report; the as-of choice is stated, so the numbers are reproducible.'}
 };
 
-const DONATE_URL = 'https://ko-fi.com/'; // ← replace with your Ko-fi page (e.g. https://ko-fi.com/yourname) once you create it
+const DONATE_URL = 'https://ko-fi.com/qqpetro'; // Quinton's Ko-fi page (verified 2026-10-07)
 let SQL, db, curDb, curLesson, done = JSON.parse(localStorage.getItem('speakSqlDone')||'{}');
 
 function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); }
