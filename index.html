@@ -47,6 +47,18 @@
   .kw{color:var(--syntax-kw)}.fn{color:var(--syntax-fn)}.str{color:var(--syntax-str)}.com{color:#64748b;font-style:italic}
   @media(max-width:1100px){main{grid-template-columns:260px 1fr}#rail{grid-column:1/-1}}
   .buddyface{font-size:44px;line-height:1;text-align:center}
+  .achvsummary{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .achvcount{font-size:28px;font-weight:900;letter-spacing:-.03em;color:var(--accent)}
+  .achvrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px dashed var(--line);font-size:13px}
+  .achvrow .icon{font-size:20px;line-height:1.1;min-width:24px;text-align:center}
+  .achvrow.locked{opacity:.48}
+  .achvrow.hiddenrow{opacity:.72}
+  .achvrow b{display:block;font-size:13.5px}
+  .achvrow span{color:var(--muted);line-height:1.4}
+  .achvtoast{position:fixed;right:22px;bottom:22px;z-index:99;background:var(--ink);color:#fff;border:1px solid var(--accent-border);border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.28);padding:14px 16px;max-width:330px;animation:achvin .35s cubic-bezier(.2,1.4,.4,1) both}
+  .achvtoast b{color:var(--accent-pale)}
+  .achvtoast p{margin:4px 0 0;color:#e7e5e4;font-size:13px;line-height:1.45}
+  @keyframes achvin{from{opacity:0;transform:translateY(12px) scale(.96)}}
   aside{border:1px solid var(--line);border-radius:22px;padding:18px;background:var(--card);box-shadow:0 12px 32px rgba(28,25,23,.06);overflow-y:auto;max-height:calc(100vh - 110px)}
   aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--accent-ink);margin:16px 0 6px}
   aside h2:first-child{margin-top:0}
@@ -540,7 +552,7 @@ const META = {
 const DONATE_URL = 'https://ko-fi.com/qqpetro'; // Quinton's Ko-fi page (verified 2026-10-07)
 let SQL, db, curDb, curLesson, done = JSON.parse(localStorage.getItem('speakSqlDone')||'{}');
 
-function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); renderRail(); }
+function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); renderRail(); checkProgressAchievements(); }
 // --- Mockup 02 features: XP, streak, theme changer, fritter buddy, word card ---
 const THEMES = [
   {name:'Orange (default)', paper:'#f6f3ec', line:'#e7e0d2', accent:'#ea580c', strong:'#c2410c', ink:'#9a3412', soft:'#fff7ed', pale:'#ffcfad', border:'#fed7aa', kw:'#f472b6', fn:'#2563eb', str:'#16a34a'},
@@ -589,6 +601,84 @@ function applyTheme(){
   r.setProperty('--accent-soft', t.soft); r.setProperty('--accent-pale', t.pale); r.setProperty('--accent-border', t.border);
   r.setProperty('--syntax-kw', t.kw); r.setProperty('--syntax-fn', t.fn); r.setProperty('--syntax-str', t.str);
 }
+// Achievements: visible goals teach the path; hidden ones reward safe experiments.
+let unlockedAch = JSON.parse(localStorage.getItem('speakSqlAch')||'{}');
+let lessonStartedAt = Date.now(), firstQueryInLesson = true, fullHintOpened = false, hadSqlErrorThisLesson = false;
+const ACHIEVEMENTS = [
+  {id:'first',icon:'☕',name:'First Pour',desc:'Complete your first lesson.',when:s=>s.completed>=1},
+  {id:'five',icon:'✋',name:'SELECT Five',desc:'Complete 5 lessons.',when:s=>s.completed>=5},
+  {id:'ten',icon:'🧠',name:'Grain Brain',desc:'Complete 10 lessons.',when:s=>s.completed>=10},
+  {id:'half',icon:'🧍',name:'Halfway Human',desc:'Complete 14 lessons.',when:s=>s.completed>=14},
+  {id:'full',icon:'🏁',name:'Full Menu',desc:'Complete all 28 lessons.',when:s=>s.completed>=28},
+  {id:'warmup',icon:'🏃',name:'Warm-Up Lap',desc:'Finish Foundations 0.1, 0.2, and 0.3.',when:s=>['coffee:0.1','coffee:0.2','coffee:0.3'].every(k=>s.doneKeys.has(k))},
+  {id:'coffee',icon:'🧾',name:'Coffee Shop Regular',desc:'Complete every Coffee Shop lesson.',when:s=>s.dbComplete.has('coffee')},
+  {id:'creator',icon:'📈',name:'Algorithm Whisperer',desc:'Complete every Creator Studio lesson.',when:s=>s.dbComplete.has('creator')},
+  {id:'store',icon:'💸',name:'Margin Call',desc:'Complete every Side Hustle Store lesson.',when:s=>s.dbComplete.has('store')},
+  {id:'house',icon:'🏠',name:'House Meeting Adjourned',desc:'Complete every Roommate House lesson.',when:s=>s.dbComplete.has('roommate')},
+  {id:'job',icon:'💼',name:'Offer Letter Energy',desc:'Complete every Job Hunt Tracker lesson.',when:s=>s.dbComplete.has('jobhunt')},
+  {id:'tour',icon:'🌍',name:'Five-Table Tour',desc:'Complete at least one lesson in all five databases.',when:s=>s.dbsTouched.size>=5},
+  {id:'having',icon:'🎯',name:'HAVING a Moment',desc:'Complete lesson 1.2 and filter groups like you mean it.',when:s=>s.doneKeys.has('coffee:1.2')},
+  {id:'distinct',icon:'👥',name:'Distinctly Human',desc:'Complete lesson 1.3: count people, not receipts.',when:s=>s.doneKeys.has('coffee:1.3')},
+  {id:'window',icon:'🪟',name:'Window Shopper',desc:'Complete any window-function lesson.',when:s=>['creator:2.1','creator:2.2','creator:2.3','creator:2.5'].some(k=>s.doneKeys.has(k))},
+  {id:'join',icon:'🔗',name:'Join the Club',desc:'Complete a JOIN lesson (3.2 or 4.3).',when:s=>s.doneKeys.has('store:3.2')||s.doneKeys.has('roommate:4.3')},
+  {id:'benchmark',icon:'📏',name:'Benchmarked',desc:'Complete lesson 3.5 and beat the average customer.',when:s=>s.doneKeys.has('store:3.5')},
+  {id:'net',icon:'⚖️',name:'Net Worth It',desc:'Complete lesson 4.5 and net out the whole house.',when:s=>s.doneKeys.has('roommate:4.5')},
+  {id:'funnel',icon:'🔎',name:'Funnel Vision',desc:'Complete lesson 5.2 and segment the job hunt.',when:s=>s.doneKeys.has('jobhunt:5.2')},
+  {id:'followup',icon:'📬',name:'Follow-Up Boss',desc:'Complete lesson 5.5 and build the aging list.',when:s=>s.doneKeys.has('jobhunt:5.5')},
+  {id:'look',icon:'👀',name:'Look Before You Query',desc:'Start a lesson by running SELECT * to inspect the table.',manual:true},
+  {id:'hintless',icon:'🙈',name:'Hint? Never Met Her',desc:'Solve a checked lesson without opening the full-query hint.',manual:true},
+  {id:'buddy1',icon:'🐣',name:'Emotional Support SELECT',desc:'Adopt your first buddy.',when:s=>s.ownedCount>=1},
+  {id:'fritterkeeper',icon:'🍎',name:'Fritter Keeper',desc:'Unlock Apple Fritter.',when:s=>s.owned.includes('fritter')},
+  {id:'menagerie',icon:'🐾',name:'Menagerie Manager',desc:'Own any three buddies.',when:s=>s.ownedCount>=3},
+  {id:'streak2',icon:'💃',name:'Two-Day Tango',desc:'Reach a 2-day streak.',when:s=>s.streak>=2},
+  {id:'streak7',icon:'🗓️',name:'Seven-Day Sort',desc:'Reach a 7-day streak.',when:s=>s.streak>=7},
+  {id:'xp500',icon:'💰',name:'XP Investor',desc:'Earn 500 lifetime XP.',when:s=>s.xp>=500},
+  {id:'xp1000',icon:'👺',name:'XP Goblin (Affectionate)',desc:'Earn 1,000 lifetime XP.',when:s=>s.xp>=1000},
+  {id:'themes3',icon:'🎨',name:'Interior Designer',desc:'Use three different accent themes.',when:s=>s.themesUsed>=3},
+  {id:'oops',icon:'💥',name:'OOPS!',desc:'Try to DROP a table. Your buddy grabbed the keyboard.',hidden:true,manual:true},
+  {id:'nullvoid',icon:'🕳️',name:'NULL & Void',desc:'Get a query result containing NULL.',hidden:true,manual:true},
+  {id:'notfound',icon:'🔍',name:'404: Rows Not Found',desc:'Run a valid query that returns zero rows.',hidden:true,manual:true},
+  {id:'tableone',icon:'🍽️',name:'Table for One',desc:'Return exactly one row.',hidden:true,manual:true},
+  {id:'cteness',icon:'🪆',name:'CTE-ness',desc:'Successfully run a query using WITH.',hidden:true,manual:true},
+  {id:'cowboy',icon:'🤠',name:'Semicolon Cowboy',desc:'Run a successful query with no semicolon. Reckless. Effective.',hidden:true,manual:true},
+  {id:'caps',icon:'📣',name:'CAPS LOCK COWBOY',desc:'Run a successful query written entirely in uppercase.',hidden:true,manual:true},
+  {id:'commentator',icon:'🎙️',name:'Commentator',desc:'Run a successful query containing a SQL comment.',hidden:true,manual:true},
+  {id:'aggregates',icon:'🥣',name:'Oops! All Aggregates',desc:'Use SUM, COUNT, and AVG in one successful query.',hidden:true,manual:true},
+  {id:'jamboree',icon:'🎪',name:'Join Jamboree',desc:'Use two or more JOINs in one successful query.',hidden:true,manual:true},
+  {id:'night',icon:'🦉',name:'Night Shift',desc:'Run a successful query between midnight and 5 a.m.',hidden:true,manual:true},
+  {id:'meant',icon:'😅',name:'I Meant To Do That',desc:'Get a SQL error, then solve the same lesson correctly.',hidden:true,manual:true},
+  {id:'speed',icon:'⏱️',name:'Speedrun Any%',desc:'Solve a checked lesson within 60 seconds of opening it.',hidden:true,manual:true},
+  {id:'secondlap',icon:'🔁',name:'Second Lap',desc:'Solve a lesson again after it was already complete.',hidden:true,manual:true},
+  {id:'petrock',icon:'🪨',name:'Pet Rock',desc:'Complete five lessons while still buddy-free.',hidden:true,when:s=>s.completed>=5&&s.ownedCount===0}
+];
+function achievementState(){
+  const doneKeys = new Set(Object.keys(done).filter(k=>done[k]));
+  const dbComplete = new Set(), dbsTouched = new Set();
+  DATABASES.forEach(d=>{
+    const keys = d.lessons.map(l=>d.id+':'+l.id);
+    if(keys.every(k=>doneKeys.has(k))) dbComplete.add(d.id);
+    if(keys.some(k=>doneKeys.has(k))) dbsTouched.add(d.id);
+  });
+  return {doneKeys, completed:doneKeys.size, dbComplete, dbsTouched, xp:xpEarned(), streak:streak(),
+    themesUsed:(JSON.parse(localStorage.getItem('speakSqlThemesUsed')||'[]')).length,
+    owned:ownedBuddies.slice(), ownedCount:ownedBuddies.length};
+}
+function achievementById(id){ return ACHIEVEMENTS.find(a=>a.id===id); }
+function showAchievementToast(a){
+  const old = document.querySelector('.achvtoast'); if(old) old.remove();
+  const el = document.createElement('div'); el.className='achvtoast';
+  el.innerHTML = `<b>${a.icon} Achievement unlocked</b><div style="font-size:17px;font-weight:900;margin-top:3px">${a.name}</div><p>${a.desc}</p>`;
+  document.body.appendChild(el); setTimeout(()=>el.remove(), 4600);
+}
+function awardAchievement(id){
+  const a = achievementById(id); if(!a || unlockedAch[id]) return false;
+  unlockedAch[id] = new Date().toISOString(); localStorage.setItem('speakSqlAch', JSON.stringify(unlockedAch));
+  showAchievementToast(a); renderRail(); return true;
+}
+function checkProgressAchievements(){
+  const s = achievementState();
+  ACHIEVEMENTS.filter(a=>!a.manual && a.when).forEach(a=>{ if(a.when(s)) awardAchievement(a.id); });
+}
 function noteDay(){
   const today = new Date().toLocaleDateString('en-CA');
   const days = JSON.parse(localStorage.getItem('speakSqlDays')||'[]');
@@ -607,6 +697,9 @@ function renderRail(){
   if(!el || !curLesson) return;
   const l = curLesson, b = buddy(), s = streak();
   const w = l.vocab[0] || ['SQL','Structured Query Language: the language databases answer to.'];
+  const unlockedCount = ACHIEVEMENTS.filter(a=>unlockedAch[a.id]).length;
+  const recentAch = ACHIEVEMENTS.filter(a=>unlockedAch[a.id]).sort((a,b)=>String(unlockedAch[b.id]).localeCompare(String(unlockedAch[a.id]))).slice(0,3);
+  const visibleAch = ACHIEVEMENTS.filter(a=>!a.hidden), hiddenAch = ACHIEVEMENTS.filter(a=>a.hidden);
   el.innerHTML = `
     <div class="wordcard">
       <p class="kicker">TERM OF THE LESSON</p>
@@ -629,14 +722,24 @@ function renderRail(){
       <h3 style="margin:0">Make it yours</h3>
       <p style="font-size:13px;color:var(--muted);margin:6px 0 0">Accent color. Saved on this device.</p>
       <div class="themedots">${THEMES.map((t,i)=>`<button class="themedot ${i===themeIdx?'sel':''}" data-theme="${i}" title="${t.name}" style="background:linear-gradient(135deg, ${t.accent} 0 58%, ${t.pale} 58%)"></button>`).join('')}</div>
+    </div>
+    <div class="railcard">
+      <div class="achvsummary"><div><h3 style="margin:0">Trophy shelf</h3><p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">Visible goals plus a few hidden experiments.</p></div><div class="achvcount">${unlockedCount}/${ACHIEVEMENTS.length}</div></div>
+      ${recentAch.length?recentAch.map(a=>`<div class="achvrow"><div class="icon">${a.icon}</div><div><b>${a.name}</b><span>${a.desc}</span></div></div>`).join(''):'<p style="font-size:13px;color:var(--muted)">No trophies yet. First Pour is one lesson away.</p>'}
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:800;color:var(--accent-ink);font-size:13.5px">See all achievements</summary>
+        ${visibleAch.map(a=>`<div class="achvrow ${unlockedAch[a.id]?'':'locked'}"><div class="icon">${unlockedAch[a.id]?a.icon:'🔒'}</div><div><b>${a.name}</b><span>${a.desc}</span></div></div>`).join('')}
+        <p style="font-size:13px;margin:14px 0 4px"><b>Hidden experiments</b> · ${hiddenAch.filter(a=>unlockedAch[a.id]).length}/${hiddenAch.length} found</p>
+        ${hiddenAch.map(a=>unlockedAch[a.id]?`<div class="achvrow"><div class="icon">${a.icon}</div><div><b>${a.name}</b><span>${a.desc}</span></div></div>`:`<div class="achvrow hiddenrow"><div class="icon">❔</div><div><b>Hidden achievement</b><span>Keep experimenting. Gently.</span></div></div>`).join('')}
+      </details>
     </div>`;
-  el.querySelectorAll('[data-theme]').forEach(btn=>btn.onclick=()=>{ themeIdx=parseInt(btn.dataset.theme,10); localStorage.setItem('speakSqlTheme', String(themeIdx)); applyTheme(); renderRail(); });
+  el.querySelectorAll('[data-theme]').forEach(btn=>btn.onclick=()=>{ themeIdx=parseInt(btn.dataset.theme,10); localStorage.setItem('speakSqlTheme', String(themeIdx)); const used=JSON.parse(localStorage.getItem('speakSqlThemesUsed')||'[]'); if(!used.includes(themeIdx)){ used.push(themeIdx); localStorage.setItem('speakSqlThemesUsed', JSON.stringify(used)); } applyTheme(); renderRail(); checkProgressAchievements(); });
   el.querySelectorAll('[data-buy]').forEach(btn=>btn.onclick=()=>{
     const x = BUDDIES.find(y=>y.id===btn.dataset.buy);
     if(!x || xpBalance() < x.cost) return;
     xpSpent += x.cost; buddyId = x.id; ownedBuddies.push(x.id);
     localStorage.setItem('speakSqlSpent', String(xpSpent)); localStorage.setItem('speakSqlBuddy', buddyId); localStorage.setItem('speakSqlOwned', JSON.stringify(ownedBuddies));
-    renderRail(); setStatus(x.face+' '+x.name+' unlocked. '+x.line,'ok');
+    renderRail(); checkProgressAchievements(); setStatus(x.face+' '+x.name+' unlocked. '+x.line,'ok');
   });
   el.querySelectorAll('[data-adopt]').forEach(btn=>btn.onclick=()=>{
     const x = BUDDIES.find(y=>y.id===btn.dataset.adopt);
@@ -827,7 +930,7 @@ function showLesson(d, l){
         <div style="background:var(--accent-soft);border:1px dashed var(--accent-border);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:14px">
           ${(m.task||[l.problem]).map((t,i)=>`<p style="margin:4px 0"><b>Step ${i+1}:</b> ${t}</p>`).join('')}
           <p style="margin:6px 0 0"><b>Read it aloud first:</b> if you cannot say what one row of the output means, the grain is wrong.</p>
-          <details style="margin-top:10px">
+          <details id="fullhint" style="margin-top:10px">
             <summary style="cursor:pointer;font-weight:bold;color:#b03a2e;font-size:13.5px">Last hint — the full query (build yours first; this is the answer)</summary>
             <pre style="background:#111827;color:#e5e7eb;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap;margin:8px 0 0">${l.starter.replace(/</g,'&lt;')}</pre>
           </details>
@@ -862,6 +965,8 @@ function showLesson(d, l){
   sb0.value = 'SELECT * FROM ' + firstTable + ';';
   document.getElementById('edlabel').textContent = 'editor — ' + d.id + ' · ' + firstTable;
   sb0.oninput = syncHl; sb0.onscroll = syncHl; syncHl();
+  lessonStartedAt = Date.now(); firstQueryInLesson = true; fullHintOpened = false; hadSqlErrorThisLesson = false;
+  const fh = document.getElementById('fullhint'); if(fh) fh.addEventListener('toggle', ()=>{ if(fh.open) fullHintOpened = true; });
   renderRail();
   renderDbViewer();
   document.getElementById('run').onclick = runQuery;
@@ -873,18 +978,51 @@ function setStatus(msg, cls){ const s=document.getElementById('status'); s.inner
 function runQuery(){
   const q = document.getElementById('sqlbox').value.trim();
   const out = document.getElementById('out');
-  if(!q){ setStatus('Write a query first — even a wrong one teaches more than a blank box.','err'); return; }
+  if(!q){ setStatus('Write a query first. Even a wrong one teaches more than a blank box.','err'); return; }
+  if(/\bDROP\s+TABLE\b/i.test(q)){
+    awardAchievement('oops');
+    setStatus('💥 OOPS! Achievement unlocked. Nice try. The table is protected, and your buddy has confiscated the keyboard.','err');
+    out.innerHTML=''; return;
+  }
+  const lessonKey = curDb.id+':'+curLesson.id;
+  const wasAlreadyDone = !!done[lessonKey];
   try{
     const res = db.exec(q);
     renderDbViewer();
-    if(!res.length){ setStatus('Query ran. No result set (or the table is empty).',''); out.innerHTML=''; return; }
+    if(firstQueryInLesson && /^\s*select\s+\*\s+from\b/i.test(q)) awardAchievement('look');
+    firstQueryInLesson = false;
+    if(!res.length){
+      if(/^\s*(select|with)\b/i.test(q)) awardAchievement('notfound');
+      setStatus('Query ran. No result set (or the table is empty).',''); out.innerHTML=''; return;
+    }
     const {columns, values} = res[0];
     out.innerHTML = `<table class="res"><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr>${values.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table>`;
+    if(values.length===0) awardAchievement('notfound');
+    if(values.some(r=>r.some(v=>v===null))) awardAchievement('nullvoid');
+    if(values.length===1) awardAchievement('tableone');
+    if(/^\s*with\b/i.test(q)) awardAchievement('cteness');
+    if(!q.endsWith(';')) awardAchievement('cowboy');
+    if(q===q.toUpperCase() && /SELECT/.test(q)) awardAchievement('caps');
+    if(/--/.test(q)) awardAchievement('commentator');
+    if(/\bSUM\s*\(/i.test(q) && /\bCOUNT\s*\(/i.test(q) && /\bAVG\s*\(/i.test(q)) awardAchievement('aggregates');
+    if(((q.match(/\bJOIN\b/gi)||[]).length)>=2) awardAchievement('jamboree');
+    const hour = new Date().getHours(); if(hour>=0 && hour<5) awardAchievement('night');
     const ok = checkResult(res, curLesson);
-    if(ok===true){ done[curDb.id+':'+curLesson.id]=true; noteDay(); saveDone(); setStatus('✓ Correct. That matches the expected result, +'+lessonDifficulty(curLesson).xp+' XP earned. Say the sentence out loud before you move on.','ok'); }
+    if(ok===true){
+      if(wasAlreadyDone){
+        awardAchievement('secondlap');
+        setStatus('✓ Correct again. Practice lap complete. No duplicate XP, just stronger SQL muscles.','ok');
+      } else {
+        if(Date.now()-lessonStartedAt <= 60000) awardAchievement('speed');
+        if(!fullHintOpened) awardAchievement('hintless');
+        if(hadSqlErrorThisLesson) awardAchievement('meant');
+        done[lessonKey]=true; noteDay(); saveDone();
+        setStatus('✓ Correct. That matches the expected result, +'+lessonDifficulty(curLesson).xp+' XP earned. Say the sentence out loud before you move on.','ok');
+      }
+    }
     else if(ok===false){ setStatus('Ran fine, but the result doesn’t match the problem yet. Check your grain, then your filter. Reset and retry if the data got edited.','err'); }
-    else setStatus('Ran. Compare it against the problem statement — does it actually answer it?','ok');
-  }catch(e){ setStatus('SQL error: '+e.message+' — read it literally; it usually names the exact line that broke.','err'); out.innerHTML=''; }
+    else setStatus('Ran. Compare it against the problem statement. Does it actually answer it?','ok');
+  }catch(e){ hadSqlErrorThisLesson = true; setStatus('SQL error: '+e.message+'. Read it literally; it usually names the exact line that broke.','err'); out.innerHTML=''; }
 }
 initSqlJs({ locateFile: f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/'+f }).then(sql=>{
   SQL = sql; renderProgress(); renderSidebar(); loadDb(DATABASES[0]);
