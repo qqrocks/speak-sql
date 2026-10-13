@@ -172,7 +172,7 @@ const DATABASES = [
     starter:`SELECT drink, size, price
 FROM orders;`,
     sayit:'“Before I analyze anything, I look at the raw rows — grain first, questions second.”',
-    expect:null},
+    expect:[['latte','M',5.5],['cold brew','L',5],['latte','M',5.5],['matcha','M',6],['espresso','S',3.5],['cold brew','L',5],['latte','L',6.5],['matcha','M',6],['latte','M',5.5],['espresso','S',3.5],['cold brew','M',4.5],['latte','M',5.5],['matcha','L',7],['espresso','S',3.5],['cold brew','L',5]]},
    {id:'0.2', title:'WHERE — keep only the rows you mean',
     vocab:[['WHERE','filters rows before anything else happens. The condition is a yes/no test per row.'],['String literal','text values go in single quotes: drink = ’latte’. Numbers don’t.']],
     problem:'List customer, drink, and price for latte orders only.',
@@ -189,7 +189,7 @@ FROM orders
 ORDER BY price DESC
 LIMIT 3;`,
     sayit:'“Top three by price — I sorted before I limited, or the ‘top’ would be random rows.”',
-    expect:null},
+    expect:[['Priya','matcha',7],['Alex','latte',6.5],['Sam','matcha',6]]},
    {id:'1.1', title:'GROUP BY — revenue per drink', worked:true,
     vocab:[['Grain','the level of detail one row represents. Here: one row = one order. Say it before you query.'],['Dimension vs measure','dimension = what you slice by (drink); measure = what you add up (price).'],['Aggregate function','SUM / COUNT / AVG — many values in, one number out, per group.']],
     problem:'Revenue and order count per drink, biggest revenue first.',
@@ -1136,7 +1136,8 @@ function runQuery(){
         if(!fullHintOpened) awardAchievement('hintless');
         if(hadSqlErrorThisLesson) awardAchievement('meant');
         done[lessonKey]=true; noteDay(); saveDone();
-        setStatus('✓ Correct. That matches the expected result, +'+lessonDifficulty(curLesson).xp+' XP earned. Say the sentence out loud before you move on.','ok'); petSay('complete');
+        const mk=document.getElementById('mark'); if(mk) mk.textContent='✓ Completed';
+        setStatus('✓ Correct. Lesson auto-completed — that matches the expected result, +'+lessonDifficulty(curLesson).xp+' XP earned. Say the sentence out loud before you move on.','ok'); petSay('complete');
       }
     }
     else if(ok===false){ setStatus('Ran fine, but the result doesn’t match the problem yet. Check your grain, then your filter. Reset and retry if the data got edited.','err'); petSay('attempt'); }
