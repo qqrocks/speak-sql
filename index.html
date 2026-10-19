@@ -84,6 +84,10 @@
   .lessonbtn:hover{background:var(--accent-soft)}
   .lessonbtn.active{background:var(--accent-soft);border-color:var(--accent-border);font-weight:800;color:var(--accent-ink)}
   .lessonbtn .done{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:bold;flex:none;animation:checkpop .5s cubic-bezier(.2,1.6,.4,1) both}
+  .modetoggle{display:flex;gap:8px;margin-bottom:12px}
+  .modetoggle button{flex:1;padding:10px 8px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+  .modetoggle button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  #itimer.over{background:#b91c1c}
   @keyframes checkpop{from{transform:scale(.4);opacity:0}}
   section{padding:0;overflow-y:auto;max-height:calc(100vh - 110px)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px 22px;margin-bottom:18px;box-shadow:0 12px 32px rgba(28,25,23,.06)}
@@ -573,6 +577,12 @@ const META = {
 
 const DONATE_URL = 'https://ko-fi.com/qqpetro'; // Quinton's Ko-fi page (verified 2026-10-07)
 let SQL, db, curDb, curLesson, done = JSON.parse(localStorage.getItem('speakSqlDone')||'{}');
+let idone = JSON.parse(localStorage.getItem('speakSqlInterview')||'{}');
+let mode = localStorage.getItem('speakSqlMode')||'practice';
+let curIQ = null, iqStart = 0, iqTimer = null;
+
+function saveInterview(){ localStorage.setItem('speakSqlInterview', JSON.stringify(idone)); renderProgress(); renderSidebar(); renderRail(); checkProgressAchievements(); }
+function interviewCount(){ return Object.keys(idone).filter(k=>idone[k]).length; }
 
 function saveDone(){ localStorage.setItem('speakSqlDone', JSON.stringify(done)); renderProgress(); renderSidebar(); renderRail(); checkProgressAchievements(); }
 // --- Mockup 02 features: XP, streak, theme changer, fritter buddy, word card ---
@@ -638,8 +648,8 @@ function xpForKey(key){
   const d = DATABASES.find(x=>x.id===dbId); const l = d && d.lessons.find(x=>x.id===lessonId);
   return l ? lessonDifficulty(l).xp : 0;
 }
-function xpEarned(){ return Object.keys(done).filter(k=>done[k]).reduce((sum,k)=>sum+xpForKey(k),0); }
-function totalXp(){ return DATABASES.reduce((sum,d)=>sum+d.lessons.reduce((s,l)=>s+lessonDifficulty(l).xp,0),0); }
+function xpEarned(){ return Object.keys(done).filter(k=>done[k]).reduce((sum,k)=>sum+xpForKey(k),0) + interviewCount()*50; }
+function totalXp(){ return DATABASES.reduce((sum,d)=>sum+d.lessons.reduce((s,l)=>s+lessonDifficulty(l).xp,0),0) + INTERVIEW.length*50; }
 function xpBalance(){ return Math.max(0, xpEarned() - xpSpent); }
 let darkMode = localStorage.getItem('speakSqlDark')==='1';
 function applyTheme(){
@@ -706,7 +716,9 @@ const ACHIEVEMENTS = [
   {id:'meant',icon:'😅',name:'I Meant To Do That',desc:'Get a SQL error, then solve the same lesson correctly.',hidden:true,manual:true},
   {id:'speed',icon:'⏱️',name:'Speedrun Any%',desc:'Solve a checked lesson within 60 seconds of opening it.',hidden:true,manual:true},
   {id:'secondlap',icon:'🔁',name:'Second Lap',desc:'Solve a lesson again after it was already complete.',hidden:true,manual:true},
-  {id:'petrock',icon:'🪨',name:'Pet Rock',desc:'Complete five lessons while still buddy-free.',hidden:true,when:s=>s.completed>=5&&s.ownedCount===0}
+  {id:'petrock',icon:'🪨',name:'Pet Rock',desc:'Complete five lessons while still buddy-free.',hidden:true,when:s=>s.completed>=5&&s.ownedCount===0},
+  {id:'coldcall',icon:'🎤',name:'Cold Call',desc:'Pass your first interview question.',when:s=>s.interviewDone>=1},
+  {id:'panel',icon:'🧑‍⚖️',name:'Panel Ready',desc:'Pass all 6 interview questions.',when:s=>s.interviewDone>=6}
 ];
 function achievementState(){
   const doneKeys = new Set(Object.keys(done).filter(k=>done[k]));
@@ -717,6 +729,7 @@ function achievementState(){
     if(keys.some(k=>doneKeys.has(k))) dbsTouched.add(d.id);
   });
   return {doneKeys, completed:doneKeys.size, dbComplete, dbsTouched, xp:xpEarned(), streak:streak(),
+    interviewDone:interviewCount(),
     themesUsed:(JSON.parse(localStorage.getItem('speakSqlThemesUsed')||'[]')).length,
     owned:ownedBuddies.slice(), ownedCount:ownedBuddies.length};
 }
@@ -835,16 +848,30 @@ function loadDb(d){
 }
 function renderSidebar(){
   const sb = document.getElementById('sidebar');
-  sb.innerHTML = DATABASES.map(d=>{
+  const toggle = `<div class="modetoggle"><button class="${mode==='practice'?'on':''}" data-mode="practice">📚 Practice</button><button class="${mode==='interview'?'on':''}" data-mode="interview">🎤 Interview</button></div>`;
+  if(mode==='interview'){
+    const n = interviewCount();
+    const list = INTERVIEW.map(q=>`<button class="lessonbtn ${curIQ&&curIQ.id===q.id?'active':''}" data-iq="${q.id}"><span>${idone[q.id]?'<span class="done">✓</span> ':''}${q.id.toUpperCase()} · ${q.title}</span><span class="diffchip">50 XP</span></button>`).join('');
+    sb.innerHTML = toggle + `<h2>🎤 Interview Mode</h2><p style="font-size:13px;color:var(--muted);margin:0 0 6px">${n} / ${INTERVIEW.length} passed · no hints, timer running. Write it like someone’s watching.</p>` + list + `<div class="donatebox"><a href="${DONATE_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a><div style="margin-top:6px">Keeps the lessons free.</div></div>`;
+    sb.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+    sb.querySelectorAll('[data-iq]').forEach(b=>b.onclick=()=>{ showInterview(INTERVIEW.find(x=>x.id===b.dataset.iq)); });
+    return;
+  }
+  sb.innerHTML = toggle + DATABASES.map(d=>{
     const lessons = d.lessons.map(l=>`<button class="lessonbtn ${curLesson&&curLesson.id===l.id&&curDb===d?'active':''}" data-db="${d.id}" data-lesson="${l.id}"><span>${done[d.id+':'+l.id]?'<span class="done">✓</span> ':''}${l.id} ${l.title}</span><span class="diffchip">${lessonDifficulty(l).xp} XP</span></button>`).join('');
     return `<h2>${d.name}</h2>${lessons}`;
   }).join('') + `<div class="donatebox"><a href="${DONATE_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a><div style="margin-top:6px">Keeps the lessons free.</div></div>`;
+  sb.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
   sb.querySelectorAll('.lessonbtn').forEach(b=>b.onclick=()=>{
     const d = DATABASES.find(x=>x.id===b.dataset.db);
     const l = d.lessons.find(x=>x.id===b.dataset.lesson);
     if(curDb!==d) { curDb=d; db=new SQL.Database(); db.run(d.schema); db.run(d.seed); }
     showLesson(d,l);
   });
+}
+function setMode(m){
+  mode = m; localStorage.setItem('speakSqlMode', m); clearInterval(iqTimer);
+  if(m==='interview'){ showInterview(INTERVIEW[0]); } else { loadDb(curDb || DATABASES[0]); }
 }
 function norm(v){ return typeof v==='number' ? Math.round(v*100)/100 : v; }
 function checkResult(res, lesson){
@@ -972,8 +999,57 @@ const CONCEPTS = {
 '5.4':{tool:'Date difference', plain:'When two milestones live on separate rows, join them together for the same thing, then subtract dates to get a duration.', table:'packages', cols:['package','event','day'], rows:[['P1','shipped','2026-10-01'],['P1','delivered','2026-10-04']], sql:'SELECT s.package,\n  julianday(d.day) - julianday(s.day) AS days_to_deliver\nFROM packages s\nJOIN packages d ON d.package = s.package\nWHERE s.event = \'shipped\' AND d.event = \'delivered\';', read:'Shipped on the 1st, delivered on the 4th: 3 days. Two rows became one duration.', expected:{cols:['package','days_to_deliver'], rows:[['P1',3.0]]}},
 '5.5':{tool:'Aging report', plain:'An aging report subtracts a start date from a chosen “as of” date. The as-of date is part of the answer, so say it out loud.', table:'invoices', cols:['client','sent_on','paid'], rows:[['Ana','2026-09-01',0],['Ben','2026-09-20',0],['Cleo','2026-09-25',1]], sql:"SELECT client,\n  CAST(julianday('2026-09-30') - julianday(sent_on) AS INTEGER) AS days_waiting\nFROM invoices\nWHERE paid = 0\nORDER BY days_waiting DESC;", read:'As of Sep 30, Ana has waited 29 days. Oldest first becomes the follow-up list.', expected:{cols:['client','days_waiting'], rows:[['Ana',29],['Ben',10]]}}
 };
-function outcomeHtml(c){
-  const e = c.expected; if(!e) return '';
+const INTERVIEW = [
+{id:'iq1', db:'coffee', title:'Top 2 drinks by revenue',
+ brief:'“We’re cutting the menu down to two drinks. Which two earned the most, and how many of each did we sell? Biggest earner first.”',
+ think:'Say the grain first: one row of the answer is one <b>drink</b>. What goes inside each drink’s bucket, and how do you rank the buckets?',
+ minutes:5, ordered:true,
+ expect:[['latte',5,28.5],['cold brew',4,19.5]],
+ model:`SELECT drink, COUNT(*) AS orders, ROUND(SUM(price), 2) AS revenue\nFROM orders\nGROUP BY drink\nORDER BY revenue DESC\nLIMIT 2;`,
+ followupQ:'Espresso and matcha both sold 3 orders, but matcha earned almost double. What would you check next?',
+ followupA:'The price mix inside each drink — GROUP BY drink, size. The same order count can hide very different revenue when sizes are priced differently.'},
+{id:'iq2', db:'creator', title:'Rank the platforms by CTR',
+ brief:'“Views are up everywhere, but the sponsor cares about pull, not reach. Rank the platforms by click-through rate, best first — platform and CTR as a percent.”',
+ think:'A rate is a division. What are you summing before you divide — and why not average the per-post percentages?',
+ minutes:6, ordered:true,
+ expect:[['YouTube',6.1],['Instagram',4.3],['TikTok',1.7]],
+ model:`SELECT platform, ROUND(100.0 * SUM(clicks) / SUM(views), 1) AS ctr\nFROM posts\nGROUP BY platform\nORDER BY ctr DESC;`,
+ followupQ:'TikTok has by far the most views and the worst CTR. Where does next month’s effort go, and in one sentence, why?',
+ followupA:'YouTube — its audience actually clicks. Views measure distribution; CTR measures resonance, and you allocate effort to resonance.'},
+{id:'iq3', db:'store', title:'Revenue per channel, nobody dropped',
+ brief:'“Break revenue and customer count down by signup channel. And don’t lose anyone — I want the customers who signed up and never bought to stay in the count.”',
+ think:'Two traps: the join type, and what “customers” means after a one-to-many join. Name both before you type.',
+ minutes:8, ordered:false,
+ expect:[['instagram',3,315.0],['organic',2,350.0],['tiktok',3,245.0]],
+ model:`SELECT c.channel, COUNT(DISTINCT c.customer_id) AS customers,\n  ROUND(SUM(o.amount), 2) AS revenue\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.customer_id\nGROUP BY c.channel;`,
+ followupQ:'You ran it first with an INNER JOIN and got fewer customers. What did that version silently claim?',
+ followupA:'That every customer bought something — it deleted the non-buyers before counting. The LEFT JOIN keeps them; the question is about acquisition, not just revenue.'},
+{id:'iq4', db:'roommate', title:'Who paid what, missing receipts as zero',
+ brief:'“Two receipts are missing — treat them as zero, on purpose, where everyone can see it. How much has each roommate actually paid toward shared expenses?”',
+ think:'Someone with no expenses must still appear. Which join keeps them, and what turns their missing amounts into honest zeros?',
+ minutes:6, ordered:false,
+ expect:[['Jordan',352.8],['Maya',3660.0],['Sam',180.95]],
+ model:`SELECT r.name, ROUND(SUM(COALESCE(e.amount, 0)), 2) AS paid\nFROM roommates r\nLEFT JOIN expenses e ON e.paid_by = r.roommate_id\nGROUP BY r.name;`,
+ followupQ:'Why COALESCE instead of just letting AVG skip the NULLs?',
+ followupA:'Skipping NULLs quietly changes the denominator — the average would divide by 8 expenses instead of 10. COALESCE states the assumption (missing = zero) inside the query where it can be argued with.'},
+{id:'iq5', db:'jobhunt', title:'Interview rate by company segment',
+ brief:'“Same resume, three worlds: startups, big tech, agencies. For each segment, show applications, interviews, and the interview rate.”',
+ think:'“Reached interview” isn’t a column. How do you count a subset inside each group?',
+ minutes:8, ordered:false,
+ expect:[['agency',6,0,0.0],['bigtech',6,1,16.7],['startup',8,4,50.0]],
+ model:`SELECT segment, COUNT(*) AS apps,\n  SUM(CASE WHEN stage IN ('interview','offer') THEN 1 ELSE 0 END) AS interviews,\n  ROUND(100.0 * SUM(CASE WHEN stage IN ('interview','offer') THEN 1 ELSE 0 END) / COUNT(*), 1) AS rate\nFROM applications\nGROUP BY segment;`,
+ followupQ:'Agencies show 0%. Is that a finding or noise?',
+ followupA:'Noise until proven otherwise — it’s 0 of 6. Name the sample size when you quote a rate, or you’ll present a coin flip as a strategy.'},
+{id:'iq6', db:'coffee', title:'Debug: the HAVING mix-up',
+ brief:'“This query was supposed to list drinks with more than 3 orders, but it errors. Fix it — and tell me why it broke.”<br><br><code>SELECT drink, COUNT(*) AS n FROM orders WHERE n &gt; 3 GROUP BY drink;</code>',
+ think:'Read the error literally, then recite the execution order: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY. Where in that order is n born?',
+ minutes:5, ordered:false,
+ expect:[['cold brew',4],['latte',5]],
+ model:`SELECT drink, COUNT(*) AS n\nFROM orders\nGROUP BY drink\nHAVING COUNT(*) > 3;`,
+ followupQ:'Why does the fixed version use HAVING instead of WHERE?',
+ followupA:'WHERE filters rows before grouping — at that point the count doesn’t exist yet. HAVING filters groups after GROUP BY has built them.'}
+];
+function outcomeHtml(c){  const e = c.expected; if(!e) return '';
   if(e.error) return `<p style="margin:8px 0 4px"><b>This is what running it gives you:</b></p><p class="err" style="margin:0">❌ It fails: <code>${e.error}</code></p>`;
   return `<p style="margin:8px 0 4px"><b>This is what running it gives you:</b></p><table class="res"><tr>${e.cols.map(x=>`<th>${x}</th>`).join('')}</tr>${e.rows.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table>`;
 }
@@ -1099,6 +1175,122 @@ function showLesson(d, l){
   document.getElementById('clear').onclick = ()=>{ document.getElementById('sqlbox').value=''; syncHl(); };
   document.getElementById('mark').onclick = (e)=>{ const k=d.id+':'+l.id; done[k]=!done[k]; if(!done[k]) delete done[k]; else noteDay(); saveDone(); e.target.textContent = done[k]?'✓ Completed':'Mark complete'; petSay(done[k]?'complete':'start'); };
 }
+function showInterview(q){
+  curIQ = q; curLesson = null; curDb = DATABASES.find(d=>d.id===q.db);
+  db = new SQL.Database(); db.run(curDb.schema); db.run(curDb.seed);
+  renderSidebar();
+  const stage = document.getElementById('stage');
+  const tbl = curDb.schema.split('\n').filter(x=>x.trim()).join('\n');
+  stage.innerHTML = `
+    <div class="card">
+      <h3>🎤 Interview ${q.id.toUpperCase()} — ${q.title}</h3>
+      <p style="margin:0 0 10px"><span class="diffchip">no hints</span> <span class="xpchip">+50 XP</span> <span class="diffchip">⏱ ${q.minutes} min target</span> <span class="xpchip" id="itimer">0:00</span></p>
+      <p style="background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px"><b>The interviewer asks:</b> ${q.brief}</p>
+      <p><b>🗣️ Think out loud first:</b> ${q.think}</p>
+      <div class="editor schema-editor"><div class="ebar"><i></i><i></i><i></i><span>schema — ${curDb.id} · CREATE TABLE</span></div><pre>${hlSql(tbl)}</pre></div>
+    </div>
+    <div class="card dbview">
+      <h3>📊 The database you’re working with</h3>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:0">Live data, same as practice mode. Reset restores it.</p>
+      <div id="dbview"></div>
+    </div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">Write the query — then defend it</p>
+      <p style="font-size:13.5px;color:var(--muted);margin:0 0 6px">The editor starts with <code>SELECT *</code> on the first table, same as practice. The timer is already running.</p>
+      <div class="editor"><div class="ebar"><i></i><i></i><i></i><span id="edlabel">editor</span></div><div class="edwrap"><pre id="hlcode" aria-hidden="true"></pre><textarea id="sqlbox" spellcheck="false"></textarea></div></div>
+      <div class="btnrow">
+        <button class="act" id="run">▶ Run query</button>
+        <button class="ghost" id="reset">↺ Reset database</button>
+        <button class="ghost" id="clear">Clear editor</button>
+      </div>
+      <div id="status"></div>
+      <div id="out"></div>
+      <div id="ifollow"></div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:bold;color:#b03a2e;font-size:13.5px">Stuck? Model query (redo it cold afterwards — reading isn’t passing)</summary>
+        <pre style="background:#111827;color:#e5e7eb;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto;white-space:pre-wrap;margin:8px 0 0">${q.model.replace(/</g,'&lt;')}</pre>
+      </details>
+    </div>
+    <div class="donatebox">If this helped, <a href="${DONATE_URL}" target="_blank" rel="noopener">☕ buy me a coffee</a> — it keeps Speak SQL free for the next learner.</div>`;
+  const firstTable = (curDb.schema.match(/CREATE TABLE\s+(\w+)/i)||[])[1] || 'orders';
+  const sb0 = document.getElementById('sqlbox');
+  sb0.value = 'SELECT * FROM ' + firstTable + ';';
+  document.getElementById('edlabel').textContent = 'editor — ' + curDb.id + ' · ' + firstTable;
+  sb0.oninput = syncHl; sb0.onscroll = syncHl; syncHl();
+  renderRail(); petSay('start');
+  renderDbViewer();
+  document.getElementById('run').onclick = ()=>{ petSay('attempt'); runInterviewQuery(); };
+  document.getElementById('reset').onclick = ()=>{ db=new SQL.Database(); db.run(curDb.schema); db.run(curDb.seed); renderDbViewer(); setStatus('Database reset to its starting data. Nothing else changed.',''); document.getElementById('out').innerHTML=''; };
+  document.getElementById('clear').onclick = ()=>{ document.getElementById('sqlbox').value=''; syncHl(); };
+  clearInterval(iqTimer); iqStart = Date.now();
+  iqTimer = setInterval(()=>{
+    const el = document.getElementById('itimer'); if(!el){ clearInterval(iqTimer); return; }
+    const s = Math.floor((Date.now()-iqStart)/1000);
+    el.textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    if(s > q.minutes*60){ el.classList.add('over'); }
+  }, 500);
+}
+function iqElapsed(){ const s=Math.floor((Date.now()-iqStart)/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function checkInterview(res, q){
+  if(!res || !res.length) return null;
+  const got = res[0].values.map(r=>r.map(norm).join('|'));
+  const exp = q.expect.map(r=>r.map(norm).join('|'));
+  if(q.ordered) return JSON.stringify(got)===JSON.stringify(exp);
+  return JSON.stringify([...got].sort())===JSON.stringify([...exp].sort());
+}
+function runInterviewQuery(){
+  const q = curIQ; if(!q) return;
+  const sql = document.getElementById('sqlbox').value.trim();
+  const out = document.getElementById('out');
+  if(!sql){ setStatus('Write a query first. Even a wrong one teaches more than a blank box.','err'); return; }
+  if(/\bDROP\s+TABLE\b/i.test(sql)){
+    awardAchievement('oops');
+    setStatus('💥 OOPS! Achievement unlocked. Nice try. The table is protected, and your buddy has confiscated the keyboard.','err');
+    out.innerHTML=''; return;
+  }
+  const wasDone = !!idone[q.id];
+  try{
+    const res = db.exec(sql);
+    renderDbViewer();
+    if(!res.length){ setStatus('Query ran. No result set (or the table is empty).',''); petSay('attempt'); out.innerHTML=''; return; }
+    const {columns, values} = res[0];
+    out.innerHTML = `<table class="res"><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr>${values.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<em>NULL</em>':v}</td>`).join('')}</tr>`).join('')}</table>`;
+    if(values.length===0) awardAchievement('notfound');
+    if(values.some(r=>r.some(v=>v===null))) awardAchievement('nullvoid');
+    if(values.length===1) awardAchievement('tableone');
+    if(/^\s*with\b/i.test(sql)) awardAchievement('cteness');
+    if(!sql.endsWith(';')) awardAchievement('cowboy');
+    if(sql===sql.toUpperCase() && /SELECT/.test(sql)) awardAchievement('caps');
+    if(/--/.test(sql)) awardAchievement('commentator');
+    if(/\bSUM\s*\(/i.test(sql) && /\bCOUNT\s*\(/i.test(sql) && /\bAVG\s*\(/i.test(sql)) awardAchievement('aggregates');
+    if(((sql.match(/\bJOIN\b/gi)||[]).length)>=2) awardAchievement('jamboree');
+    const hour = new Date().getHours(); if(hour>=0 && hour<5) awardAchievement('night');
+    const ok = checkInterview(res, q);
+    if(ok===true){
+      clearInterval(iqTimer);
+      const t = iqElapsed();
+      if(wasDone){
+        awardAchievement('secondlap');
+        setStatus('✓ Correct again in '+t+'. No duplicate XP — just interview muscle.','ok'); petSay('complete');
+      } else {
+        idone[q.id]=true; noteDay(); saveInterview();
+        setStatus('✓ <b>Passed in '+t+'</b> — that matches the expected result. +50 XP. Now say the follow-up out loud before you move on.','ok'); petSay('complete');
+      }
+      document.getElementById('ifollow').innerHTML = `
+        <div class="tipbox" style="margin-top:12px">🗣️ <b>Follow-up — say it out loud, then check:</b>
+          <p style="margin:6px 0"><b>Q:</b> ${q.followupQ}</p>
+          <details><summary style="cursor:pointer;font-weight:bold">Model answer</summary><p style="margin:6px 0">${q.followupA}</p></details>
+        </div>`;
+    }
+    else if(ok===false){
+      const expN = q.expect.length, gotN = values.length;
+      if(gotN!==expN) setStatus(`Not quite — expected <b>${expN} rows</b>, got <b>${gotN}</b>. Check your grain${gotN>expN?' (duplicates? fan-out?)':' (filter too tight? wrong join?)'}.`,'err');
+      else setStatus('Row count matches, but some values differ. Check your math, your grouping, or your sort.','err');
+      petSay('attempt');
+    }
+    else { setStatus('Ran. Compare it against the brief — does it actually answer what was asked?','ok'); petSay('attempt'); }
+  }catch(e){ setStatus('SQL error: '+e.message+'. Read it literally; it usually names the exact line that broke.','err'); petSay('attempt'); out.innerHTML=''; }
+}
 function setStatus(msg, cls){ const s=document.getElementById('status'); s.innerHTML=msg; s.className=cls; }
 function runQuery(){
   const q = document.getElementById('sqlbox').value.trim();
@@ -1151,7 +1343,8 @@ function runQuery(){
   }catch(e){ hadSqlErrorThisLesson = true; setStatus('SQL error: '+e.message+'. Read it literally; it usually names the exact line that broke.','err'); petSay('attempt'); out.innerHTML=''; }
 }
 initSqlJs({ locateFile: f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/'+f }).then(sql=>{
-  SQL = sql; renderProgress(); renderSidebar(); loadDb(DATABASES[0]);
+  SQL = sql; renderProgress(); renderSidebar();
+  if(mode==='interview') showInterview(INTERVIEW[0]); else loadDb(DATABASES[0]);
 }).catch(e=>{ document.getElementById('stage').innerHTML = '<div class="card"><h3>Could not load the SQL engine</h3><p>'+e.message+'</p></div>'; });
 </script>
 </body>
